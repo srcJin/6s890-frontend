@@ -7,6 +7,7 @@ import {
   buildingNames,
   players,
   parseObservationForBoard,
+  parseAndDisplayInfo
 } from "../components/Utils";
 
 // Simulation component
@@ -145,15 +146,8 @@ const Simulation = () => {
         <p>
           <strong>Actions:</strong> {turnData.actions.join(", ")}
         </p>
-        <p>
-          <strong>Rewards:</strong>{" "}
-          {Array.isArray(turnData.rewards)
-            ? turnData.rewards.join(", ")
-            : turnData.rewards}
-        </p>
-        <p>
-          <strong>Info:</strong> {JSON.stringify(turnData.info)}
-        </p>
+
+        <div>{parseAndDisplayInfo(turnData.info)}</div>
       </div>
     );
   };
@@ -208,9 +202,6 @@ const Simulation = () => {
     }
   };
 
-  const handleActionTypeChange = (e) => {
-    setActionType(e.target.value);
-  };
 
   return (
     <div className="max-w-4xl mx-auto p-6 bg-white shadow-md rounded-md">
@@ -228,24 +219,42 @@ const Simulation = () => {
         </p>
       </div>
 
-      {/* Player Information Panel: Displays info for all players */}
+      {/* Player Information */}
       <div className="mb-6">
         <h2 className="text-xl font-semibold">Player Information</h2>
         <div className="grid grid-cols-3 gap-4">
-          {Object.entries(players).map(([player, info]) => (
-            <div
-              key={player}
-              className={`p-4 rounded-md ${
-                player === currentPlayer ? "bg-green-100" : "bg-gray-100"
-              }`}
-            >
-              <p>
-                <strong>{player}</strong>: {info.role}
-              </p>
-              <p>Money: {info.resources.Money}</p>
-              <p>Reputation: {info.resources.Reputation}</p>
-            </div>
-          ))}
+          {Object.entries(players).map(([player, info]) => {
+            // Use current turn data if available
+            const turnData =
+              simulationEpisode && simulationEpisode[currentTurnIndex]
+                ? simulationEpisode[currentTurnIndex]
+                : null;
+            const dynamicResources =
+              turnData &&
+                turnData.info &&
+                turnData.info.player_resources &&
+                turnData.info.player_resources[player]
+                ? turnData.info.player_resources[player]
+                : info.resources;
+
+            // Compatible with different key names (backend uses lowercase)
+            const money = dynamicResources.money || dynamicResources.Money;
+            const reputation = dynamicResources.reputation || dynamicResources.Reputation;
+
+            return (
+              <div
+                key={player}
+                className={`p-4 rounded-md ${player === "P1" ? "bg-green-100" : "bg-gray-100"}`}
+              >
+                <p>
+                  <strong>{player}</strong>: {info.role}
+                </p>
+                <p>Money: {money}</p>
+                <p>Reputation: {reputation}</p>
+                {player === "P1" && <p>(Human)</p>}
+              </div>
+            );
+          })}
         </div>
       </div>
 
@@ -291,7 +300,7 @@ const Simulation = () => {
           )}
         </div>
         {/* Movement Controls */}
-        {simulationEpisode && (
+        {/* {simulationEpisode && (
           <div className="flex justify-center gap-4 mb-4">
             <button
               onClick={previousMovement}
@@ -314,17 +323,20 @@ const Simulation = () => {
               Next Movement
             </button>
           </div>
-        )}
+        )} */}
         {simulationEpisode && (
           <div className="text-center">
             {(() => {
               const turnObs = simulationEpisode[currentTurnIndex].observation;
               const movements = Array.isArray(turnObs[0]) ? turnObs[0] : turnObs;
               return (
-                <p>
-                  Turn {currentTurnIndex + 1} of {simulationEpisode.length} - Movement: P
-                  {currentMovementIndex + 1} of {movements.length}
-                </p>
+                <div>
+                  <p>
+                    Turn {currentTurnIndex + 1} of {simulationEpisode.length}
+                  </p>
+                  {/* <p>Movement: P
+                  {currentMovementIndex + 1} of {movements.length}</p> */}
+                </div>
               );
             })()}
             {renderSimulationTurn()}
@@ -332,33 +344,7 @@ const Simulation = () => {
         )}
       </div>
 
-      {/* (Optional) Action Selection Panel */}
-      {selectedParcel && (
-        <div className="mb-6">
-          <h2 className="text-xl font-semibold mb-2">Provide Actions</h2>
-          <div className="p-4 bg-blue-100 rounded-md">
-            <p>
-              Selected Parcel at ({selectedParcel.x}, {selectedParcel.y})
-            </p>
-            <div className="mt-2">
-              <label htmlFor="action-type" className="font-medium mr-2">
-                Action Type:
-              </label>
-              <select
-                id="action-type"
-                value={actionType}
-                onChange={handleActionTypeChange}
-                className="p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">Select Action</option>
-                <option value="0">Build Park</option>
-                <option value="1">Build House</option>
-                <option value="2">Build Shop</option>
-              </select>
-            </div>
-          </div>
-        </div>
-      )}
+
     </div>
   );
 };

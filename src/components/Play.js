@@ -1,168 +1,136 @@
-// src/components/SimCityGame.js
-
 "use client";
 
 import React, { useState, useEffect } from "react";
+import {
+  initialDummyBoard,
+  buildingColorMap,
+  buildingNames,
+  players,
+  parseObservationForBoard,
+  parseAndDisplayInfo
+} from "../components/Utils";
 
-// Initial dummy board (used as fallback)
-const initialDummyBoard = [
-  [
-    { owner: null, type: -1 },
-    { owner: null, type: -1 },
-    { owner: null, type: -1 },
-    { owner: null, type: -1 },
-  ],
-  [
-    { owner: null, type: -1 },
-    { owner: null, type: -1 },
-    { owner: null, type: -1 },
-    { owner: null, type: -1 },
-  ],
-  [
-    { owner: null, type: -1 },
-    { owner: null, type: -1 },
-    { owner: null, type: -1 },
-    { owner: null, type: -1 },
-  ],
-  [
-    { owner: null, type: -1 },
-    { owner: null, type: -1 },
-    { owner: null, type: -1 },
-    { owner: null, type: -1 },
-  ],
-];
-
-const players = {
-  P1: { role: "Altruistic Player", resources: { Money: 35, Reputation: 40 } },
-  P2: { role: "Balanced Player", resources: { Money: 30, Reputation: 35 } },
-  P3: { role: "Interest Driven Player", resources: { Money: 25, Reputation: 15 } },
-};
-
-/**
- * parseObservationForBoard extracts board information from a flat observation.
- * The flat observation is structured as:
- * - indices 0 - 47: grid data (ignored for board visualization)
- * - indices 48 - 49: resources (ignored for board visualization)
- * - indices 50 - 65: builders (4x4 matrix)
- * - indices 66 - 81: building types (4x4 matrix)
- */
-const parseObservationForBoard = (observation) => {
-  if (observation.length < 82) {
-    console.error("Observation length is less than expected (82).");
-    return initialDummyBoard;
-  }
-  // Extract builders: indices 50 to 65
-  const buildersFlat = observation.slice(50, 66);
-  // Extract building types: indices 66 to 82
-  const buildingTypesFlat = observation.slice(66, 82);
-  const board = [];
-  for (let i = 0; i < 4; i++) {
-    const row = [];
-    for (let j = 0; j < 4; j++) {
-      const builderVal = buildersFlat[i * 4 + j];
-      const bType = buildingTypesFlat[i * 4 + j];
-      row.push({
-        owner: builderVal === -1 ? null : `P${builderVal + 1}`,
-        type: bType,
-      });
-    }
-    board.push(row);
-  }
-  return board;
-};
-
-// Mapping from building type to low-saturation Tailwind background color
-const buildingColorMap = {
-  [-1]: "bg-gray-100", // Empty
-  0: "bg-green-200",   // Park
-  1: "bg-yellow-200",  // House
-  2: "bg-red-200",     // Shop
-};
-
-const buildingNames = {
-  0: "Park",
-  1: "House",
-  2: "Shop",
-  "-1": "Empty",
-};
+// Define grid dimensions (for a 4x4 board)
+const GRID_X = 4;
+const GRID_Y = 4;
+const NUM_CELLS = GRID_X * GRID_Y;
 
 const Play = () => {
-  // Existing states
-  const [selectedParcel, setSelectedParcel] = useState(null);
-  const [actionType, setActionType] = useState("");
-  const [error, setError] = useState("");
-  const [currentPlayer, setCurrentPlayer] = useState("P1");
-  const [showBuilders, setShowBuilders] = useState(true);
-
-  // New states for simulation episode visualization
-  const [simulationEpisode, setSimulationEpisode] = useState(null);
-  const [currentTurnIndex, setCurrentTurnIndex] = useState(0);
+  // Board state (initially using dummy board; will update with server response)
   const [boardState, setBoardState] = useState(initialDummyBoard);
+  // Selected parcel (cell) by human player, e.g., { x: 0, y: 0 }
+  const [selectedParcel, setSelectedParcel] = useState(null);
+  // Human player's chosen action
+  // We'll include an option for "Skip" as well as building options.
+  const [actionType, setActionType] = useState("");
+  // Error message display
+  const [error, setError] = useState("");
+  // Info from the last step response
+  const [lastStepInfo, setLastStepInfo] = useState(null);
 
-  // Function to fetch a full simulation episode from the API
-  const fetchSimulationEpisode = async () => {
+  // On page load, reset the game (call /reset API)
+  useEffect(() => {
+    handleResetGame();
+  }, []);
+
+  // Reset game: call /reset API and update board state
+  const handleResetGame = async () => {
     try {
-      const res = await fetch("http://127.0.0.1:5888/simulate", {
+      const res = await fetch("http://127.0.0.1:5888/reset", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({}),
       });
       const data = await res.json();
-      setSimulationEpisode(data.episode_records);
-      setCurrentTurnIndex(0);
-      // Update board state using the observation from the first turn (first agent's observation)
-      if (data.episode_records && data.episode_records.length > 0) {
-        const firstObs = data.episode_records[0].observation[0][0];
-        setBoardState(parseObservationForBoard(firstObs));
+      // Update board based on initial observation
+      if (
+        data &&
+        data.observation &&
+        data.observation.length > 0 &&
+        data.observation[0].length > 0
+      ) {
+        const newObs = data.observation[0][0];
+        setBoardState(parseObservationForBoard(newObs));
       }
-    } catch (error) {
-      console.error("Error fetching simulation episode:", error);
+      // Clear any previous step info and selection
+      setLastStepInfo(null);
+      setSelectedParcel(null);
+      setActionType("");
+    } catch (err) {
+      console.error("Error resetting game:", err);
+      setError("Error resetting game. Please try again.");
     }
   };
 
-  // Advance to the next turn in the episode
-  const nextTurn = () => {
-    if (simulationEpisode && currentTurnIndex < simulationEpisode.length - 1) {
-      const newIndex = currentTurnIndex + 1;
-      setCurrentTurnIndex(newIndex);
-      const newObs = simulationEpisode[newIndex].observation[0][0];
-      setBoardState(parseObservationForBoard(newObs));
+  // When a cell is clicked, select it if empty
+  const handleParcelClick = (x, y, cell) => {
+    if (cell.type === -1) {
+      setSelectedParcel({ x, y });
+    } else {
+      setError("Only empty parcels can be selected.");
+      setTimeout(() => setError(""), 2000);
     }
   };
 
-  // Go back to the previous turn
-  const previousTurn = () => {
-    if (simulationEpisode && currentTurnIndex > 0) {
-      const newIndex = currentTurnIndex - 1;
-      setCurrentTurnIndex(newIndex);
-      const newObs = simulationEpisode[newIndex].observation[0][0];
-      setBoardState(parseObservationForBoard(newObs));
-    }
+  // Handle dropdown change (human action)
+  const handleActionTypeChange = (e) => {
+    setActionType(e.target.value);
   };
 
-  // Render current simulation turn details
-  const renderSimulationTurn = () => {
-    if (!simulationEpisode) {
-      return <div>No simulation data. Click "Simulate Episode" to fetch data.</div>;
+  // Compute valid action number based on selection:
+  // - If "skip" is chosen, return 0.
+  // - Otherwise, for building action b and selected cell with id, action = 1 + b * NUM_CELLS + cell_id.
+  const computeActionNumber = () => {
+    if (actionType === "skip" || actionType === "") {
+      return 0; // skip action
     }
-    const turnData = simulationEpisode[currentTurnIndex];
-    return (
-      <div className="p-4 border rounded-md bg-gray-50 my-4">
-        <h3 className="text-lg font-bold">Turn {turnData.t_env}</h3>
-        <p>
-          <strong>Actions:</strong> {turnData.actions.join(", ")}
-        </p>
-        <p>
-          <strong>Rewards:</strong>{" "}
-          {Array.isArray(turnData.rewards)
-            ? turnData.rewards.join(", ")
-            : turnData.rewards}
-        </p>
-        <p>
-          <strong>Info:</strong> {JSON.stringify(turnData.info)}
-        </p>
-      </div>
-    );
+    if (!selectedParcel) {
+      return 0;
+    }
+    const b = parseInt(actionType, 10); // building type index, e.g., 0, 1, or 2
+    const cellId = selectedParcel.x * GRID_Y + selectedParcel.y;
+    return 1 + b * NUM_CELLS + cellId;
+  };
+
+  // Handler: Submit human action. Assumes agent 0 is human.
+  const handleSubmitAction = async () => {
+    if (selectedParcel === null) {
+      setError("Please select an empty cell first.");
+      return;
+    }
+    // If user wants to skip, actionType should be "skip" or empty.
+    // Otherwise, actionType should be one of "0", "1", or "2".
+    const actionNumber = computeActionNumber();
+    try {
+      // Prepare payload: agent P1 gets the human-provided action number.
+      // P2 is 0, P3 is 1, and P1 is 2.
+      const payload = {
+        user_actions: { "2": actionNumber },
+      };
+      const res = await fetch("http://127.0.0.1:5888/step", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      setLastStepInfo(data);
+      // Update board using the new observation returned by the server.
+      if (
+        data &&
+        data.next_observation &&
+        data.next_observation.length > 0 &&
+        data.next_observation[0].length > 0
+      ) {
+        const newObs = data.next_observation[0][0];
+        setBoardState(parseObservationForBoard(newObs));
+      }
+      // Clear selection and action
+      setSelectedParcel(null);
+      setActionType("");
+    } catch (err) {
+      console.error("Error submitting action:", err);
+      setError("Error submitting action. Please try again.");
+    }
   };
 
   // Render the board based on boardState
@@ -177,22 +145,28 @@ const Play = () => {
                   const cellName =
                     cell.type === -1
                       ? "Empty"
-                      : buildingNames[cell.type.toString()] || `Type ${cell.type}`;
-                  const bgClass =
-                    buildingColorMap[cell.type] || "bg-gray-100";
+                      : buildingNames[cell.type.toString()] ||
+                      `Type ${cell.type}`;
+                  const bgClass = buildingColorMap[cell.type] || "bg-gray-100";
+                  const highlight =
+                    selectedParcel &&
+                      selectedParcel.x === rowIndex &&
+                      selectedParcel.y === cellIndex
+                      ? "bg-blue-100"
+                      : "";
                   return (
                     <td
                       key={`cell-${rowIndex}-${cellIndex}`}
-                      className={`w-24 h-24 border border-gray-300 text-center ${bgClass}`}
-                      onClick={() => console.log(`Cell clicked at [${rowIndex},${cellIndex}]`)}
+                      className={`w-24 h-24 border border-gray-300 text-center ${bgClass} ${highlight}`}
+                      onClick={() => handleParcelClick(rowIndex, cellIndex, cell)}
                     >
                       <div className="flex flex-col items-center">
-                        <span className="text-sm font-medium">{cellName}</span>
-                        {showBuilders && (
-                          <span className="text-xs text-gray-500">
-                            {cell.owner ? `Built by ${cell.owner}` : "Unclaimed"}
-                          </span>
-                        )}
+                        <span className="text-sm font-medium">
+                          {cellName}
+                        </span>
+                        <span className="text-xs text-gray-500">
+                          {cell.owner ? `Built by ${cell.owner}` : "Unclaimed"}
+                        </span>
                       </div>
                     </td>
                   );
@@ -205,26 +179,25 @@ const Play = () => {
     );
   };
 
-  // Existing parcel and action type handlers remain unchanged
-  const handleParcelClick = (x, y, cell) => {
-    if (cell.type === -1) {
-      setSelectedParcel({ x, y });
-      setActionType("");
-    } else {
-      setError("Only empty parcels can be selected.");
-      setTimeout(() => setError(""), 2000);
-    }
-  };
-
-  const handleActionTypeChange = (e) => {
-    setActionType(e.target.value);
+  // Render last step info (from /step API)
+  const renderLastStepInfo = () => {
+    if (!lastStepInfo) return null;
+    return (
+      <div className="p-4 border rounded-md bg-gray-50 my-4">
+        <h3 className="text-lg font-bold">
+          Turn {lastStepInfo.t_env} Info
+        </h3>
+        <p>
+          <strong>Actions Taken:</strong>{" "}
+          {lastStepInfo.actions_taken.join(", ")}
+        </p>
+        <div>{parseAndDisplayInfo(lastStepInfo.info)}</div>
+      </div>
+    );
   };
 
   return (
     <div className="max-w-4xl mx-auto p-6 bg-white shadow-md rounded-md">
-      <h1 className="text-2xl font-bold mb-4 text-center">
-        SimCity Game Interface
-      </h1>
 
       {error && (
         <div className="mb-4 p-4 text-red-700 bg-red-100 rounded-md">
@@ -232,117 +205,112 @@ const Play = () => {
         </div>
       )}
 
+      {/* Reset Game Button */}
       <div className="mb-6">
-        <h2 className="text-xl font-semibold">Current Player</h2>
-        <p className="p-4 bg-blue-100 rounded-md">
-          <strong>{currentPlayer}</strong>: {players[currentPlayer].role}
-        </p>
-      </div>
-
-      <div className="mb-6">
-        <h2 className="text-xl font-semibold">Player Information</h2>
-        <div className="grid grid-cols-3 gap-4">
-          {Object.entries(players).map(([player, info]) => (
-            <div
-              key={player}
-              className={`p-4 rounded-md ${
-                player === currentPlayer ? "bg-green-100" : "bg-gray-100"
-              }`}
-            >
-              <p>
-                <strong>{player}</strong>: {info.role}
-              </p>
-              {player === currentPlayer && (
-                <>
-                  <p>Money: {info.resources.Money}</p>
-                  <p>Reputation: {info.resources.Reputation}</p>
-                </>
-              )}
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Render the board from boardState */}
-      <div className="mb-6">
-        <h2 className="text-xl font-semibold mb-2 text-center">Game Board</h2>
-        {renderBoard()}
         <button
-          onClick={() => setShowBuilders(!showBuilders)}
-          className="px-4 py-2 text-white bg-blue-500 rounded-md hover:bg-blue-600"
+          onClick={handleResetGame}
+          className="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600"
         >
-          {showBuilders ? "Hide Builders" : "Show Builders"}
+          Reset Game
         </button>
       </div>
 
-      {/* Simulation Controls */}
-      <div className="mb-6 p-4 border rounded-md bg-gray-50">
-        <h2 className="text-xl font-semibold mb-2 text-center">Simulation</h2>
-        <div className="flex justify-center gap-4 mb-4">
-          <button
-            onClick={fetchSimulationEpisode}
-            className="px-4 py-2 text-white bg-green-500 rounded-md hover:bg-green-600"
-          >
-            Simulate Episode
-          </button>
-          {simulationEpisode && (
-            <>
-              <button
-                onClick={previousTurn}
-                className="px-4 py-2 text-white bg-purple-500 rounded-md hover:bg-purple-600"
-                disabled={currentTurnIndex === 0}
+      {/* Player Information */}
+      <div className="mb-6">
+        <h2 className="text-xl font-semibold">Player Information</h2>
+        <div className="grid grid-cols-3 gap-4">
+
+          {/* Debug lastStepInfo.info */}
+          {/* <div>{JSON.stringify(lastStepInfo?.info)}</div> */}
+
+          {Object.entries(players).map(([player, info]) => {
+            // 从 lastStepInfo.info 中获取动态的玩家资源，否则回退到静态资源
+            const dynamicResources =
+              lastStepInfo &&
+                lastStepInfo.info &&
+                lastStepInfo.info.player_resources &&
+                lastStepInfo.info.player_resources[player]
+                ? lastStepInfo.info.player_resources[player]
+                : info.resources;
+
+            // comptible with different key names
+            const money = dynamicResources.money;
+            const reputation = dynamicResources.reputation;
+
+            return (
+              <div
+                key={player}
+                className={`p-4 rounded-md ${player === "P1" ? "bg-green-100" : "bg-gray-100"}`}
               >
-                Previous Turn
-              </button>
-              <button
-                onClick={nextTurn}
-                className="px-4 py-2 text-white bg-blue-500 rounded-md hover:bg-blue-600"
-                disabled={
-                  simulationEpisode && currentTurnIndex === simulationEpisode.length - 1
-                }
-              >
-                Next Turn
-              </button>
-            </>
-          )}
+                <p>
+                  <strong>{player}</strong>: {info.role}
+                </p>
+                <p>Money: {money}</p>
+                <p>Reputation: {reputation}</p>
+                {player === "P1" && <p>(Human)</p>}
+              </div>
+            );
+          })}
         </div>
-        {simulationEpisode && (
-          <div className="text-center">
-            <p>
-              Turn {currentTurnIndex + 1} of {simulationEpisode.length}
-            </p>
-            {renderSimulationTurn()}
-          </div>
-        )}
       </div>
 
-      {/* (Optional) Action Selection Panel */}
-      {selectedParcel && (
-        <div className="mb-6">
-          <h2 className="text-xl font-semibold mb-2">Provide Actions</h2>
-          <div className="p-4 bg-blue-100 rounded-md">
+      {/* Render Board */}
+      <div className="mb-6">
+        <h2 className="text-xl font-semibold mb-2 text-center">Game Board</h2>
+        {renderBoard()}
+      </div>
+
+      {/* Action Panel for Human Player */}
+      <div className="mb-6 p-4 border rounded-md bg-blue-50">
+        <h2 className="text-xl font-semibold mb-2">Your Turn (Agent P1)</h2>
+        {selectedParcel ? (
+          <div>
             <p>
               Selected Parcel at ({selectedParcel.x}, {selectedParcel.y})
             </p>
             <div className="mt-2">
-              <label htmlFor="action-type" className="font-medium mr-2">
-                Action Type:
-              </label>
-              <select
-                id="action-type"
-                value={actionType}
-                onChange={handleActionTypeChange}
-                className="p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">Select Action</option>
-                <option value="0">Build Park</option>
-                <option value="1">Build House</option>
-                <option value="2">Build Shop</option>
-              </select>
+              <p className="font-medium mb-2">Choose Action:</p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setActionType("skip")}
+                  className={`px-4 py-2 rounded-md ${actionType === "skip" ? "bg-blue-700 text-white" : "bg-gray-200 hover:bg-gray-300"}`}
+                >
+                  Skip
+                </button>
+                <button
+                  onClick={() => setActionType("0")}
+                  className={`px-4 py-2 rounded-md ${actionType === "0" ? "bg-blue-700 text-white" : "bg-gray-200 hover:bg-gray-300"}`}
+                >
+                  Build Park
+                </button>
+                <button
+                  onClick={() => setActionType("1")}
+                  className={`px-4 py-2 rounded-md ${actionType === "1" ? "bg-blue-700 text-white" : "bg-gray-200 hover:bg-gray-300"}`}
+                >
+                  Build House
+                </button>
+                <button
+                  onClick={() => setActionType("2")}
+                  className={`px-4 py-2 rounded-md ${actionType === "2" ? "bg-blue-700 text-white" : "bg-gray-200 hover:bg-gray-300"}`}
+                >
+                  Build Shop
+                </button>
+              </div>
             </div>
+            <button
+              onClick={handleSubmitAction}
+              className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+            >
+              Submit Action
+            </button>
           </div>
-        </div>
-      )}
+        ) : (
+          <p>Please click on an empty cell on the board to select a parcel.</p>
+        )}
+      </div>
+
+      {/* Display Last Step Info */}
+      {renderLastStepInfo()}
     </div>
   );
 };
