@@ -214,7 +214,6 @@ const Simulation = () => {
 
   return (
     <div className="max-w-4xl mx-auto p-6 bg-white shadow-md rounded-md">
-      <h1 className="text-2xl font-bold mb-4 text-center">SimCity Game Interface</h1>
 
       {error && (
         <div className="mb-4 p-4 text-red-700 bg-red-100 rounded-md">
