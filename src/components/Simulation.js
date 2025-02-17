@@ -1,105 +1,39 @@
-// src/components/SimCityGame.js
-
 "use client";
 
 import React, { useState, useEffect } from "react";
+import {
+  initialDummyBoard,
+  buildingColorMap,
+  buildingNames,
+  players,
+  parseObservationForBoard,
+} from "../components/Utils";
 
-// Initial dummy board (used as fallback)
-const initialDummyBoard = [
-  [
-    { owner: null, type: -1 },
-    { owner: null, type: -1 },
-    { owner: null, type: -1 },
-    { owner: null, type: -1 },
-  ],
-  [
-    { owner: null, type: -1 },
-    { owner: null, type: -1 },
-    { owner: null, type: -1 },
-    { owner: null, type: -1 },
-  ],
-  [
-    { owner: null, type: -1 },
-    { owner: null, type: -1 },
-    { owner: null, type: -1 },
-    { owner: null, type: -1 },
-  ],
-  [
-    { owner: null, type: -1 },
-    { owner: null, type: -1 },
-    { owner: null, type: -1 },
-    { owner: null, type: -1 },
-  ],
-];
-
-const players = {
-  P1: { role: "Altruistic Player", resources: { Money: 35, Reputation: 40 } },
-  P2: { role: "Balanced Player", resources: { Money: 30, Reputation: 35 } },
-  P3: { role: "Interest Driven Player", resources: { Money: 25, Reputation: 15 } },
-};
-
-/**
- * parseObservationForBoard extracts board information from a flat observation.
- * The flat observation is structured as:
- * - indices 0 - 47: grid data (ignored for board visualization)
- * - indices 48 - 49: resources (ignored for board visualization)
- * - indices 50 - 65: builders (4x4 matrix)
- * - indices 66 - 81: building types (4x4 matrix)
- */
-const parseObservationForBoard = (observation) => {
-  if (observation.length < 82) {
-    console.error("Observation length is less than expected (82).");
-    return initialDummyBoard;
-  }
-  // Extract builders: indices 50 to 65
-  const buildersFlat = observation.slice(50, 66);
-  // Extract building types: indices 66 to 82
-  const buildingTypesFlat = observation.slice(66, 82);
-  const board = [];
-  for (let i = 0; i < 4; i++) {
-    const row = [];
-    for (let j = 0; j < 4; j++) {
-      const builderVal = buildersFlat[i * 4 + j];
-      const bType = buildingTypesFlat[i * 4 + j];
-      row.push({
-        owner: builderVal === -1 ? null : `P${builderVal + 1}`,
-        type: bType,
-      });
-    }
-    board.push(row);
-  }
-  return board;
-};
-
-// Mapping from building type to low-saturation Tailwind background color
-const buildingColorMap = {
-  [-1]: "bg-gray-100", // Empty
-  0: "bg-green-200",   // Park
-  1: "bg-yellow-200",  // House
-  2: "bg-red-200",     // Shop
-};
-
-const buildingNames = {
-  0: "Park",
-  1: "House",
-  2: "Shop",
-  "-1": "Empty",
-};
-
-const SimCityGame = () => {
-  // Existing states
+// Simulation component
+const Simulation = () => {
+  // Basic state variables
   const [selectedParcel, setSelectedParcel] = useState(null);
   const [actionType, setActionType] = useState("");
   const [error, setError] = useState("");
+  // currentPlayer will now sync with movement (P1, P2, P3, etc.)
   const [currentPlayer, setCurrentPlayer] = useState("P1");
   const [showBuilders, setShowBuilders] = useState(true);
 
-  // New states for simulation episode visualization
+  // Simulation episode state variables
   const [simulationEpisode, setSimulationEpisode] = useState(null);
   const [currentTurnIndex, setCurrentTurnIndex] = useState(0);
+  // Movement index is determined by the number of observations (movements) in a turn
+  const [currentMovementIndex, setCurrentMovementIndex] = useState(0);
   const [boardState, setBoardState] = useState(initialDummyBoard);
 
-  // Function to fetch a full simulation episode from the API
+  // Synchronize currentPlayer with currentMovementIndex
+  useEffect(() => {
+    const newPlayer = `P${currentMovementIndex + 1}`;
+    console.log("Syncing currentPlayer with movement:", newPlayer);
+    setCurrentPlayer(newPlayer);
+  }, [currentMovementIndex]);
+
+  // Fetch a full simulation episode from the API
   const fetchSimulationEpisode = async () => {
     try {
       const res = await fetch("http://127.0.0.1:5888/simulate", {
@@ -109,9 +43,13 @@ const SimCityGame = () => {
       });
       const data = await res.json();
       setSimulationEpisode(data.episode_records);
+      // Reset to first turn and first movement
       setCurrentTurnIndex(0);
-      // Update board state using the observation from the first turn (first agent's observation)
+      setCurrentMovementIndex(0);
       if (data.episode_records && data.episode_records.length > 0) {
+        // Log the observation structure for debugging
+        console.log("Observation for first turn:", data.episode_records[0].observation);
+        // Assume the movement dimension is in the inner array
         const firstObs = data.episode_records[0].observation[0][0];
         setBoardState(parseObservationForBoard(firstObs));
       }
@@ -120,35 +58,90 @@ const SimCityGame = () => {
     }
   };
 
-  // Advance to the next turn in the episode
+  // Advance to the next turn (reset movement to the first observation)
   const nextTurn = () => {
     if (simulationEpisode && currentTurnIndex < simulationEpisode.length - 1) {
-      const newIndex = currentTurnIndex + 1;
-      setCurrentTurnIndex(newIndex);
-      const newObs = simulationEpisode[newIndex].observation[0][0];
+      const newTurnIndex = currentTurnIndex + 1;
+      setCurrentTurnIndex(newTurnIndex);
+      setCurrentMovementIndex(0);
+      const newObs = simulationEpisode[newTurnIndex].observation[0][0];
+      console.log("Switching to turn", newTurnIndex, "observation:", simulationEpisode[newTurnIndex].observation);
       setBoardState(parseObservationForBoard(newObs));
     }
   };
 
-  // Go back to the previous turn
+  // Go back to the previous turn (reset movement to the first observation)
   const previousTurn = () => {
     if (simulationEpisode && currentTurnIndex > 0) {
-      const newIndex = currentTurnIndex - 1;
-      setCurrentTurnIndex(newIndex);
-      const newObs = simulationEpisode[newIndex].observation[0][0];
+      const newTurnIndex = currentTurnIndex - 1;
+      setCurrentTurnIndex(newTurnIndex);
+      setCurrentMovementIndex(0);
+      const newObs = simulationEpisode[newTurnIndex].observation[0][0];
+      console.log("Switching to previous turn", newTurnIndex, "observation:", simulationEpisode[newTurnIndex].observation);
       setBoardState(parseObservationForBoard(newObs));
     }
   };
 
-  // Render current simulation turn details
+  // Advance to the next movement within the current turn
+  const nextMovement = () => {
+    if (simulationEpisode) {
+      const currentTurn = simulationEpisode[currentTurnIndex];
+      // Debug log to inspect observation structure and current movement
+      console.log("Current turn observation structure:", currentTurn.observation);
+      console.log("Current movement index:", currentMovementIndex);
+      // In our sample, observation is an array with one element that holds the movements.
+      // So, we check the inner array length.
+      const movements = Array.isArray(currentTurn.observation[0])
+        ? currentTurn.observation[0]
+        : currentTurn.observation;
+      if (currentMovementIndex < movements.length - 1) {
+        const newMovementIndex = currentMovementIndex + 1;
+        setCurrentMovementIndex(newMovementIndex);
+        const newObs = Array.isArray(currentTurn.observation[0])
+          ? currentTurn.observation[0][newMovementIndex]
+          : currentTurn.observation[newMovementIndex];
+        console.log("Switching to movement", newMovementIndex, "observation:", newObs);
+        setBoardState(parseObservationForBoard(newObs));
+      } else {
+        console.log("Already at last movement:", currentMovementIndex);
+      }
+    }
+  };
+
+  // Go back to the previous movement within the current turn
+  const previousMovement = () => {
+    if (simulationEpisode && currentMovementIndex > 0) {
+      const newMovementIndex = currentMovementIndex - 1;
+      setCurrentMovementIndex(newMovementIndex);
+      const currentTurn = simulationEpisode[currentTurnIndex];
+      const movements = Array.isArray(currentTurn.observation[0])
+        ? currentTurn.observation[0]
+        : currentTurn.observation;
+      const newObs = Array.isArray(currentTurn.observation[0])
+        ? currentTurn.observation[0][newMovementIndex]
+        : currentTurn.observation[newMovementIndex];
+      console.log("Switching to previous movement", newMovementIndex, "observation:", newObs);
+      setBoardState(parseObservationForBoard(newObs));
+    }
+  };
+
+  // Render the simulation turn details, including movement info
   const renderSimulationTurn = () => {
     if (!simulationEpisode) {
       return <div>No simulation data. Click "Simulate Episode" to fetch data.</div>;
     }
     const turnData = simulationEpisode[currentTurnIndex];
+    // Determine number of movements from inner array if available
+    const movements = Array.isArray(turnData.observation[0])
+      ? turnData.observation[0]
+      : turnData.observation;
+    const numMovements = movements.length;
+    console.log("Rendering turn", turnData.t_env, "with observation structure:", turnData.observation);
     return (
       <div className="p-4 border rounded-md bg-gray-50 my-4">
-        <h3 className="text-lg font-bold">Turn {turnData.t_env}</h3>
+        <h3 className="text-lg font-bold">
+          Turn {turnData.t_env} - Movement: P{currentMovementIndex + 1} of {numMovements}
+        </h3>
         <p>
           <strong>Actions:</strong> {turnData.actions.join(", ")}
         </p>
@@ -178,8 +171,7 @@ const SimCityGame = () => {
                     cell.type === -1
                       ? "Empty"
                       : buildingNames[cell.type.toString()] || `Type ${cell.type}`;
-                  const bgClass =
-                    buildingColorMap[cell.type] || "bg-gray-100";
+                  const bgClass = buildingColorMap[cell.type] || "bg-gray-100";
                   return (
                     <td
                       key={`cell-${rowIndex}-${cellIndex}`}
@@ -222,9 +214,7 @@ const SimCityGame = () => {
 
   return (
     <div className="max-w-4xl mx-auto p-6 bg-white shadow-md rounded-md">
-      <h1 className="text-2xl font-bold mb-4 text-center">
-        SimCity Game Interface
-      </h1>
+      <h1 className="text-2xl font-bold mb-4 text-center">SimCity Game Interface</h1>
 
       {error && (
         <div className="mb-4 p-4 text-red-700 bg-red-100 rounded-md">
@@ -239,6 +229,7 @@ const SimCityGame = () => {
         </p>
       </div>
 
+      {/* Player Information Panel: Displays info for all players */}
       <div className="mb-6">
         <h2 className="text-xl font-semibold">Player Information</h2>
         <div className="grid grid-cols-3 gap-4">
@@ -252,18 +243,14 @@ const SimCityGame = () => {
               <p>
                 <strong>{player}</strong>: {info.role}
               </p>
-              {player === currentPlayer && (
-                <>
-                  <p>Money: {info.resources.Money}</p>
-                  <p>Reputation: {info.resources.Reputation}</p>
-                </>
-              )}
+              <p>Money: {info.resources.Money}</p>
+              <p>Reputation: {info.resources.Reputation}</p>
             </div>
           ))}
         </div>
       </div>
 
-      {/* Render the board from boardState */}
+      {/* Render the board */}
       <div className="mb-6">
         <h2 className="text-xl font-semibold mb-2 text-center">Game Board</h2>
         {renderBoard()}
@@ -297,20 +284,50 @@ const SimCityGame = () => {
               <button
                 onClick={nextTurn}
                 className="px-4 py-2 text-white bg-blue-500 rounded-md hover:bg-blue-600"
-                disabled={
-                  simulationEpisode && currentTurnIndex === simulationEpisode.length - 1
-                }
+                disabled={simulationEpisode && currentTurnIndex === simulationEpisode.length - 1}
               >
                 Next Turn
               </button>
             </>
           )}
         </div>
+        {/* Movement Controls */}
+        {simulationEpisode && (
+          <div className="flex justify-center gap-4 mb-4">
+            <button
+              onClick={previousMovement}
+              className="px-4 py-2 text-white bg-purple-500 rounded-md hover:bg-purple-600"
+              disabled={currentMovementIndex === 0}
+            >
+              Previous Movement
+            </button>
+            <button
+              onClick={nextMovement}
+              className="px-4 py-2 text-white bg-blue-500 rounded-md hover:bg-blue-600"
+              disabled={
+                (() => {
+                  const turnObs = simulationEpisode[currentTurnIndex].observation;
+                  const movements = Array.isArray(turnObs[0]) ? turnObs[0] : turnObs;
+                  return movements.length <= currentMovementIndex + 1;
+                })()
+              }
+            >
+              Next Movement
+            </button>
+          </div>
+        )}
         {simulationEpisode && (
           <div className="text-center">
-            <p>
-              Turn {currentTurnIndex + 1} of {simulationEpisode.length}
-            </p>
+            {(() => {
+              const turnObs = simulationEpisode[currentTurnIndex].observation;
+              const movements = Array.isArray(turnObs[0]) ? turnObs[0] : turnObs;
+              return (
+                <p>
+                  Turn {currentTurnIndex + 1} of {simulationEpisode.length} - Movement: P
+                  {currentMovementIndex + 1} of {movements.length}
+                </p>
+              );
+            })()}
             {renderSimulationTurn()}
           </div>
         )}
@@ -347,4 +364,4 @@ const SimCityGame = () => {
   );
 };
 
-export default SimCityGame;
+export default Simulation;
