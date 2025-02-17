@@ -10,6 +10,12 @@ import {
   parseAndDisplayInfo
 } from "../components/Utils";
 
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_URL ||
+  (process.env.NODE_ENV === "development"
+    ? "http://127.0.0.1:5888"
+    : "https://your-production-api-address.com");
+
 // Simulation component
 const Simulation = () => {
   // Basic state variables
@@ -37,7 +43,7 @@ const Simulation = () => {
   // Fetch a full simulation episode from the API
   const fetchSimulationEpisode = async () => {
     try {
-      const res = await fetch("http://127.0.0.1:5888/simulate", {
+      const res = await fetch(`${API_BASE_URL}/simulate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({}),
@@ -129,8 +135,8 @@ const Simulation = () => {
   // Render the simulation turn details, including movement info
   const renderSimulationTurn = () => {
     if (!simulationEpisode) {
-      return <div>No simulation data. Click "Simulate Episode" to fetch data.</div>;
-    }
+      return <div>No simulation data. Click Simulate Episode to fetch data.</div>;
+    } 
     const turnData = simulationEpisode[currentTurnIndex];
     // Determine number of movements from inner array if available
     const movements = Array.isArray(turnData.observation[0])

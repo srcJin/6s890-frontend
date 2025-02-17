@@ -15,6 +15,12 @@ const GRID_X = 4;
 const GRID_Y = 4;
 const NUM_CELLS = GRID_X * GRID_Y;
 
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_URL ||
+  (process.env.NODE_ENV === "development"
+    ? "http://127.0.0.1:5888"
+    : "https://your-production-api-address.com");
+
 const Play = () => {
   // Board state (initially using dummy board; will update with server response)
   const [boardState, setBoardState] = useState(initialDummyBoard);
@@ -36,7 +42,7 @@ const Play = () => {
   // Reset game: call /reset API and update board state
   const handleResetGame = async () => {
     try {
-      const res = await fetch("http://127.0.0.1:5888/reset", {
+      const res = await fetch(`${API_BASE_URL}/reset`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({}),
@@ -107,7 +113,7 @@ const Play = () => {
       const payload = {
         user_actions: { "2": actionNumber },
       };
-      const res = await fetch("http://127.0.0.1:5888/step", {
+      const res = await fetch(`${API_BASE_URL}/step`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
