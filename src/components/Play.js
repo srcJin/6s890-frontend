@@ -19,7 +19,7 @@ const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL ||
   (process.env.NODE_ENV === "development"
     ? "http://127.0.0.1:5888"
-    : "https://your-production-api-address.com");
+    : "https://simcity-mvp-inference-server.onrender.com:5888");
 
 const Play = () => {
   // Board state (initially using dummy board; will update with server response)
