@@ -10,9 +10,9 @@ import {
   parseAndDisplayInfo
 } from "../components/Utils";
 
-// Define grid dimensions (for a 4x4 board)
-const GRID_X = 4;
-const GRID_Y = 4;
+// Define grid dimensions (for an 8x8 board - scaled up environment)
+const GRID_X = 8;
+const GRID_Y = 8;
 const NUM_CELLS = GRID_X * GRID_Y;
 
 const API_BASE_URL =
@@ -163,15 +163,15 @@ const Play = () => {
                   return (
                     <td
                       key={`cell-${rowIndex}-${cellIndex}`}
-                      className={`w-24 h-24 border border-gray-300 text-center ${bgClass} ${highlight}`}
+                      className={`w-16 h-16 border border-gray-300 text-center ${bgClass} ${highlight} cursor-pointer hover:bg-opacity-80`}
                       onClick={() => handleParcelClick(rowIndex, cellIndex, cell)}
                     >
-                      <div className="flex flex-col items-center">
-                        <span className="text-sm font-medium">
+                      <div className="flex flex-col items-center justify-center h-full">
+                        <span className="text-xs font-medium">
                           {cellName}
                         </span>
                         <span className="text-xs text-gray-500">
-                          {cell.owner ? `Built by ${cell.owner}` : "Unclaimed"}
+                          {cell.owner ? cell.owner : ""}
                         </span>
                       </div>
                     </td>
@@ -287,19 +287,31 @@ const Play = () => {
                   onClick={() => setActionType("0")}
                   className={`px-4 py-2 rounded-md ${actionType === "0" ? "bg-blue-700 text-white" : "bg-gray-200 hover:bg-gray-300"}`}
                 >
-                  Build Park
+                  Build Green Park
                 </button>
                 <button
                   onClick={() => setActionType("1")}
                   className={`px-4 py-2 rounded-md ${actionType === "1" ? "bg-blue-700 text-white" : "bg-gray-200 hover:bg-gray-300"}`}
                 >
-                  Build House
+                  Build Resilient House
                 </button>
                 <button
                   onClick={() => setActionType("2")}
                   className={`px-4 py-2 rounded-md ${actionType === "2" ? "bg-blue-700 text-white" : "bg-gray-200 hover:bg-gray-300"}`}
                 >
-                  Build Shop
+                  Build Community Hub
+                </button>
+                <button
+                  onClick={() => setActionType("3")}
+                  className={`px-4 py-2 rounded-md ${actionType === "3" ? "bg-blue-700 text-white" : "bg-gray-200 hover:bg-gray-300"}`}
+                >
+                  Build Solar Grid
+                </button>
+                <button
+                  onClick={() => setActionType("4")}
+                  className={`px-4 py-2 rounded-md ${actionType === "4" ? "bg-blue-700 text-white" : "bg-gray-200 hover:bg-gray-300"}`}
+                >
+                  Build Flood Barrier
                 </button>
               </div>
             </div>

@@ -33,9 +33,9 @@ const Simulation = () => {
   const [currentMovementIndex, setCurrentMovementIndex] = useState(0);
   const [boardState, setBoardState] = useState(initialDummyBoard);
 
-  // Synchronize currentPlayer with currentMovementIndex
+  // Synchronize currentPlayer with currentMovementIndex (4 players: P1, P2, P3, P4)
   useEffect(() => {
-    const newPlayer = `P${currentMovementIndex + 1}`;
+    const newPlayer = `P${(currentMovementIndex % 4) + 1}`;
     console.log("Syncing currentPlayer with movement:", newPlayer);
     setCurrentPlayer(newPlayer);
   }, [currentMovementIndex]);
@@ -147,7 +147,7 @@ const Simulation = () => {
     return (
       <div className="p-4 border rounded-md bg-gray-50 my-4">
         <h3 className="text-lg font-bold">
-          Turn {turnData.t_env} - Movement: P{currentMovementIndex + 1} of {numMovements}
+          Turn {turnData.t_env} - Movement: P{(currentMovementIndex % 4) + 1} ({currentMovementIndex + 1} of {numMovements})
         </h3>
         <p>
           <strong>Actions:</strong> {turnData.actions.join(", ")}
@@ -175,14 +175,14 @@ const Simulation = () => {
                   return (
                     <td
                       key={`cell-${rowIndex}-${cellIndex}`}
-                      className={`w-24 h-24 border border-gray-300 text-center ${bgClass}`}
+                      className={`w-16 h-16 border border-gray-300 text-center ${bgClass} cursor-pointer hover:bg-opacity-80`}
                       onClick={() => console.log(`Cell clicked at [${rowIndex},${cellIndex}]`)}
                     >
-                      <div className="flex flex-col items-center">
-                        <span className="text-sm font-medium">{cellName}</span>
+                      <div className="flex flex-col items-center justify-center h-full">
+                        <span className="text-xs font-medium">{cellName}</span>
                         {showBuilders && (
                           <span className="text-xs text-gray-500">
-                            {cell.owner ? `Built by ${cell.owner}` : "Unclaimed"}
+                            {cell.owner ? cell.owner : ""}
                           </span>
                         )}
                       </div>
