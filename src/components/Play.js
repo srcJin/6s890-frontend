@@ -10,6 +10,11 @@ import {
   parseAndDisplayInfo
 } from "../components/Utils";
 
+import {
+  testIconComponents as buildingIconComponents,
+  testIconStyles as iconStyles
+} from "../components/TestUtils";
+
 // Define grid dimensions (for an 8x8 board - scaled up environment)
 const GRID_X = 8;
 const GRID_Y = 8;
@@ -148,11 +153,17 @@ const Play = () => {
             {boardState.map((row, rowIndex) => (
               <tr key={`row-${rowIndex}`}>
                 {row.map((cell, cellIndex) => {
-                  const cellName =
+                  // Use the parsed name or fall back to type-based lookup
+                  const cellName = cell.name || (
                     cell.type === -1
                       ? "Empty"
-                      : buildingNames[cell.type.toString()] ||
-                      `Type ${cell.type}`;
+                      : buildingNames[cell.type.toString()] || `Type ${cell.type}`
+                  );
+                  
+                  // Get the appropriate icon component for this cell
+                  const IconComponent = buildingIconComponents[cell.type] || 
+                                      (cell.name ? buildingIconComponents[cell.name] : null);
+                  
                   const bgClass = buildingColorMap[cell.type] || "bg-gray-100";
                   const highlight =
                     selectedParcel &&
@@ -163,16 +174,33 @@ const Play = () => {
                   return (
                     <td
                       key={`cell-${rowIndex}-${cellIndex}`}
-                      className={`w-16 h-16 border border-gray-300 text-center ${bgClass} ${highlight} cursor-pointer hover:bg-opacity-80`}
+                      className={`w-16 h-16 border border-gray-300 text-center ${cell.type === -1 ? 'bg-gray-200' : bgClass} ${highlight} cursor-pointer hover:bg-opacity-80 relative`}
                       onClick={() => handleParcelClick(rowIndex, cellIndex, cell)}
                     >
-                      <div className="flex flex-col items-center justify-center h-full">
-                        <span className="text-xs font-medium">
-                          {cellName}
-                        </span>
-                        <span className="text-xs text-gray-500">
-                          {cell.owner ? cell.owner : ""}
-                        </span>
+                      <div className="flex flex-col items-center justify-center h-full w-full absolute inset-0">
+                        {/* Display React Icon only for non-empty cells */}
+                        {cell.type !== -1 && IconComponent && (
+                          <IconComponent 
+                            size={40}
+                            style={iconStyles[cell.type] || (cell.name ? iconStyles[cell.name] : {})}
+                            title={cellName}
+                          />
+                        )}
+                        {/* Builder agent indicator in top right corner with different colors */}
+                        {cell.owner && (
+                          <span 
+                            className={`text-xs font-bold absolute top-0 right-0 w-4 h-4 flex items-center justify-center rounded-bl text-white ${
+                              cell.owner === 'P1' ? 'bg-green-600' :
+                              cell.owner === 'P2' ? 'bg-blue-600' :
+                              cell.owner === 'P3' ? 'bg-red-600' :
+                              cell.owner === 'P4' ? 'bg-purple-600' :
+                              'bg-gray-600'
+                            }`}
+                            title={`Built by ${cell.owner}`}
+                          >
+                            {cell.owner.replace('P', '')}
+                          </span>
+                        )}
                       </div>
                     </td>
                   );
@@ -264,6 +292,29 @@ const Play = () => {
       <div className="mb-6">
         <h2 className="text-xl font-semibold mb-2 text-center">Game Board</h2>
         {renderBoard()}
+        
+        {/* Builder Agent Legend */}
+        <div className="mt-4 p-3 bg-gray-50 rounded-md">
+          <h3 className="text-sm font-semibold mb-2">Builder Agent Colors:</h3>
+          <div className="flex gap-4 text-xs">
+            <div className="flex items-center gap-1">
+              <span className="w-3 h-3 bg-green-600 rounded text-white text-center leading-3 font-bold">1</span>
+              <span>Player 1 (You)</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <span className="w-3 h-3 bg-blue-600 rounded text-white text-center leading-3 font-bold">2</span>
+              <span>Player 2</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <span className="w-3 h-3 bg-red-600 rounded text-white text-center leading-3 font-bold">3</span>
+              <span>Player 3</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <span className="w-3 h-3 bg-purple-600 rounded text-white text-center leading-3 font-bold">4</span>
+              <span>Player 4</span>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Action Panel for Human Player */}

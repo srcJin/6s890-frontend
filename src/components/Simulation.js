@@ -10,6 +10,11 @@ import {
   parseAndDisplayInfo
 } from "../components/Utils";
 
+import {
+  testIconComponents as buildingIconComponents,
+  testIconStyles as iconStyles
+} from "../components/TestUtils";
+
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL ||
   (process.env.NODE_ENV === "development"
@@ -25,6 +30,7 @@ const Simulation = () => {
   // currentPlayer will now sync with movement (P1, P2, P3, etc.)
   const [currentPlayer, setCurrentPlayer] = useState("P1");
   const [showBuilders, setShowBuilders] = useState(true);
+  const [useTextIcons, setUseTextIcons] = useState(false);
 
   // Simulation episode state variables
   const [simulationEpisode, setSimulationEpisode] = useState(null);
@@ -56,8 +62,8 @@ const Simulation = () => {
       if (data.episode_records && data.episode_records.length > 0) {
         // Log the observation structure for debugging
         console.log("Observation for first turn:", data.episode_records[0].observation);
-        // Assume the movement dimension is in the inner array
-        const firstObs = data.episode_records[0].observation[0][0];
+        // Extract first agent's observation: observation[0][0][0] (first agent's 514-value array)
+        const firstObs = data.episode_records[0].observation[0][0][0];
         setBoardState(parseObservationForBoard(firstObs));
       }
     } catch (error) {
@@ -71,7 +77,7 @@ const Simulation = () => {
       const newTurnIndex = currentTurnIndex + 1;
       setCurrentTurnIndex(newTurnIndex);
       setCurrentMovementIndex(0);
-      const newObs = simulationEpisode[newTurnIndex].observation[0][0];
+      const newObs = simulationEpisode[newTurnIndex].observation[0][0][0]; // First agent's observation
       console.log("Switching to turn", newTurnIndex, "observation:", simulationEpisode[newTurnIndex].observation);
       setBoardState(parseObservationForBoard(newObs));
     }
@@ -83,7 +89,7 @@ const Simulation = () => {
       const newTurnIndex = currentTurnIndex - 1;
       setCurrentTurnIndex(newTurnIndex);
       setCurrentMovementIndex(0);
-      const newObs = simulationEpisode[newTurnIndex].observation[0][0];
+      const newObs = simulationEpisode[newTurnIndex].observation[0][0][0]; // First agent's observation
       console.log("Switching to previous turn", newTurnIndex, "observation:", simulationEpisode[newTurnIndex].observation);
       setBoardState(parseObservationForBoard(newObs));
     }
@@ -96,21 +102,14 @@ const Simulation = () => {
       // Debug log to inspect observation structure and current movement
       console.log("Current turn observation structure:", currentTurn.observation);
       console.log("Current movement index:", currentMovementIndex);
-      // In our sample, observation is an array with one element that holds the movements.
-      // So, we check the inner array length.
-      const movements = Array.isArray(currentTurn.observation[0])
-        ? currentTurn.observation[0]
-        : currentTurn.observation;
-      if (currentMovementIndex < movements.length - 1) {
-        const newMovementIndex = currentMovementIndex + 1;
-        setCurrentMovementIndex(newMovementIndex);
-        const newObs = Array.isArray(currentTurn.observation[0])
-          ? currentTurn.observation[0][newMovementIndex]
-          : currentTurn.observation[newMovementIndex];
-        console.log("Switching to movement", newMovementIndex, "observation:", newObs);
+      // For simulation, we use the first agent's observation consistently
+      // observation[0][0] contains the 4 agents, we use index 0 for the first agent
+      const agentObservations = currentTurn.observation[0][0];
+      if (Array.isArray(agentObservations) && agentObservations.length > 0) {
+        // Always use the first agent's observation for board visualization
+        const newObs = agentObservations[0]; // First agent's 514-value observation
+        console.log("Using first agent observation for board display");
         setBoardState(parseObservationForBoard(newObs));
-      } else {
-        console.log("Already at last movement:", currentMovementIndex);
       }
     }
   };
@@ -121,14 +120,14 @@ const Simulation = () => {
       const newMovementIndex = currentMovementIndex - 1;
       setCurrentMovementIndex(newMovementIndex);
       const currentTurn = simulationEpisode[currentTurnIndex];
-      const movements = Array.isArray(currentTurn.observation[0])
-        ? currentTurn.observation[0]
-        : currentTurn.observation;
-      const newObs = Array.isArray(currentTurn.observation[0])
-        ? currentTurn.observation[0][newMovementIndex]
-        : currentTurn.observation[newMovementIndex];
-      console.log("Switching to previous movement", newMovementIndex, "observation:", newObs);
-      setBoardState(parseObservationForBoard(newObs));
+      // For simulation, we use the first agent's observation consistently
+      const agentObservations = currentTurn.observation[0][0];
+      if (Array.isArray(agentObservations) && agentObservations.length > 0) {
+        // Always use the first agent's observation for board visualization
+        const newObs = agentObservations[0]; // First agent's 514-value observation
+        console.log("Using first agent observation for board display");
+        setBoardState(parseObservationForBoard(newObs));
+      }
     }
   };
 
@@ -138,19 +137,18 @@ const Simulation = () => {
       return <div>No simulation data. Click Simulate Episode to fetch data.</div>;
     } 
     const turnData = simulationEpisode[currentTurnIndex];
-    // Determine number of movements from inner array if available
-    const movements = Array.isArray(turnData.observation[0])
-      ? turnData.observation[0]
-      : turnData.observation;
-    const numMovements = movements.length;
+    // For the scaled-up environment, we have 4 agents in the observation
+    // observation[0][0] contains array of 4 agents
+    const agentObservations = turnData.observation[0][0];
+    const numMovements = Array.isArray(agentObservations) ? agentObservations.length : 1;
     console.log("Rendering turn", turnData.t_env, "with observation structure:", turnData.observation);
     return (
       <div className="p-4 border rounded-md bg-gray-50 my-4">
         <h3 className="text-lg font-bold">
-          Turn {turnData.t_env} - Movement: P{(currentMovementIndex % 4) + 1} ({currentMovementIndex + 1} of {numMovements})
+          Turn {turnData.t_env} - Agents: {numMovements} agents
         </h3>
         <p>
-          <strong>Actions:</strong> {turnData.actions.join(", ")}
+          <strong>Actions:</strong> {(turnData.actions_taken || turnData.actions || []).join(", ")}
         </p>
 
         <div>{parseAndDisplayInfo(turnData.info)}</div>
@@ -167,22 +165,46 @@ const Simulation = () => {
             {boardState.map((row, rowIndex) => (
               <tr key={`row-${rowIndex}`}>
                 {row.map((cell, cellIndex) => {
-                  const cellName =
+                  // Use the parsed name or fall back to type-based lookup
+                  const cellName = cell.name || (
                     cell.type === -1
                       ? "Empty"
-                      : buildingNames[cell.type.toString()] || `Type ${cell.type}`;
+                      : buildingNames[cell.type.toString()] || `Type ${cell.type}`
+                  );
+                  
+                  // Get the appropriate icon component for this cell
+                  const IconComponent = buildingIconComponents[cell.type] || 
+                                      (cell.name ? buildingIconComponents[cell.name] : null);
+                  
                   const bgClass = buildingColorMap[cell.type] || "bg-gray-100";
                   return (
                     <td
                       key={`cell-${rowIndex}-${cellIndex}`}
-                      className={`w-16 h-16 border border-gray-300 text-center ${bgClass} cursor-pointer hover:bg-opacity-80`}
+                      className={`w-16 h-16 border border-gray-300 text-center ${cell.type === -1 ? 'bg-gray-200' : bgClass} cursor-pointer hover:bg-opacity-80 relative`}
                       onClick={() => console.log(`Cell clicked at [${rowIndex},${cellIndex}]`)}
                     >
-                      <div className="flex flex-col items-center justify-center h-full">
-                        <span className="text-xs font-medium">{cellName}</span>
-                        {showBuilders && (
-                          <span className="text-xs text-gray-500">
-                            {cell.owner ? cell.owner : ""}
+                      <div className="flex flex-col items-center justify-center h-full w-full absolute inset-0">
+                        {/* Display React Icon only for non-empty cells */}
+                        {cell.type !== -1 && IconComponent && (
+                          <IconComponent 
+                            size={40}
+                            style={iconStyles[cell.type] || (cell.name ? iconStyles[cell.name] : {})}
+                            title={cellName}
+                          />
+                        )}
+                        {/* Builder agent indicator in top right corner with different colors */}
+                        {showBuilders && cell.owner && (
+                          <span 
+                            className={`text-xs font-bold absolute top-0 right-0 w-4 h-4 flex items-center justify-center rounded-bl text-white ${
+                              cell.owner === 'P1' ? 'bg-green-600' :
+                              cell.owner === 'P2' ? 'bg-blue-600' :
+                              cell.owner === 'P3' ? 'bg-red-600' :
+                              cell.owner === 'P4' ? 'bg-purple-600' :
+                              'bg-gray-600'
+                            }`}
+                            title={`Built by ${cell.owner}`}
+                          >
+                            {cell.owner.replace('P', '')}
                           </span>
                         )}
                       </div>
@@ -268,9 +290,157 @@ const Simulation = () => {
       <div className="mb-6">
         <h2 className="text-xl font-semibold mb-2 text-center">Game Board</h2>
         {renderBoard()}
+        
+        {/* Icon Legend */}
+        <div className="mt-4 p-4 bg-gray-50 rounded-md">
+          <h3 className="text-lg font-semibold mb-2 text-center">Icon Legend</h3>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2 text-sm">
+            {/* Buildings */}
+            <div className="bg-white p-2 rounded border">
+              <div className="text-center">
+                {(() => {
+                  const IconComponent = buildingIconComponents[0];
+                  return <IconComponent size={32} style={iconStyles[0]} />;
+                })()}
+                <p className="text-xs mt-1">Green Park</p>
+              </div>
+            </div>
+            <div className="bg-white p-2 rounded border">
+              <div className="text-center">
+                {(() => {
+                  const IconComponent = buildingIconComponents[1];
+                  return <IconComponent size={32} style={iconStyles[1]} />;
+                })()}
+                <p className="text-xs mt-1">Resilient House</p>
+              </div>
+            </div>
+            <div className="bg-white p-2 rounded border">
+              <div className="text-center">
+                {(() => {
+                  const IconComponent = buildingIconComponents[2];
+                  return <IconComponent size={32} style={iconStyles[2]} />;
+                })()}
+                <p className="text-xs mt-1">Community Hub</p>
+              </div>
+            </div>
+            <div className="bg-white p-2 rounded border">
+              <div className="text-center">
+                {(() => {
+                  const IconComponent = buildingIconComponents[3];
+                  return <IconComponent size={32} style={iconStyles[3]} />;
+                })()}
+                <p className="text-xs mt-1">Solar Grid</p>
+              </div>
+            </div>
+            <div className="bg-white p-2 rounded border">
+              <div className="text-center">
+                {(() => {
+                  const IconComponent = buildingIconComponents[4];
+                  return <IconComponent size={32} style={iconStyles[4]} />;
+                })()}
+                <p className="text-xs mt-1">Flood Barrier</p>
+              </div>
+            </div>
+            
+            {/* Terrain */}
+            <div className="bg-white p-2 rounded border">
+              <div className="text-center">
+                {(() => {
+                  const IconComponent = buildingIconComponents["River"];
+                  return <IconComponent size={32} style={iconStyles["River"]} />;
+                })()}
+                <p className="text-xs mt-1">River</p>
+              </div>
+            </div>
+            <div className="bg-white p-2 rounded border">
+              <div className="text-center">
+                {(() => {
+                  const IconComponent = buildingIconComponents["Mountain"];
+                  return <IconComponent size={32} style={iconStyles["Mountain"]} />;
+                })()}
+                <p className="text-xs mt-1">Mountain</p>
+              </div>
+            </div>
+            <div className="bg-white p-2 rounded border">
+              <div className="text-center">
+                {(() => {
+                  const IconComponent = buildingIconComponents["Lake"];
+                  return <IconComponent size={32} style={iconStyles["Lake"]} />;
+                })()}
+                <p className="text-xs mt-1">Lake</p>
+              </div>
+            </div>
+            <div className="bg-white p-2 rounded border">
+              <div className="text-center">
+                {(() => {
+                  const IconComponent = buildingIconComponents["Highway"];
+                  return <IconComponent size={32} style={iconStyles["Highway"]} />;
+                })()}
+                <p className="text-xs mt-1">Highway</p>
+              </div>
+            </div>
+            <div className="bg-white p-2 rounded border">
+              <div className="text-center">
+                {(() => {
+                  const IconComponent = buildingIconComponents["Railway"];
+                  return <IconComponent size={32} style={iconStyles["Railway"]} />;
+                })()}
+                <p className="text-xs mt-1">Railway</p>
+              </div>
+            </div>
+            
+            {/* Infrastructure */}
+            <div className="bg-white p-2 rounded border">
+              <div className="text-center">
+                {(() => {
+                  const IconComponent = buildingIconComponents["Hospital"];
+                  return <IconComponent size={32} style={iconStyles["Hospital"]} />;
+                })()}
+                <p className="text-xs mt-1">Hospital</p>
+              </div>
+            </div>
+            <div className="bg-white p-2 rounded border">
+              <div className="text-center">
+                {(() => {
+                  const IconComponent = buildingIconComponents["School"];
+                  return <IconComponent size={32} style={iconStyles["School"]} />;
+                })()}
+                <p className="text-xs mt-1">School</p>
+              </div>
+            </div>
+            <div className="bg-white p-2 rounded border">
+              <div className="text-center">
+                {(() => {
+                  const IconComponent = buildingIconComponents["FireStation"];
+                  return <IconComponent size={32} style={iconStyles["FireStation"]} />;
+                })()}
+                <p className="text-xs mt-1">Fire Station</p>
+              </div>
+            </div>
+            <div className="bg-white p-2 rounded border">
+              <div className="text-center">
+                {(() => {
+                  const IconComponent = buildingIconComponents["PowerPlant"];
+                  return <IconComponent size={32} style={iconStyles["PowerPlant"]} />;
+                })()}
+                <p className="text-xs mt-1">Power Plant</p>
+              </div>
+            </div>
+            <div className="bg-white p-2 rounded border">
+              <div className="text-center">
+                {(() => {
+                  const IconComponent = buildingIconComponents["-1"];
+                  return <IconComponent size={32} style={iconStyles["-1"]} />;
+                })()}
+                <p className="text-xs mt-1">Empty</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        
         <button
           onClick={() => setShowBuilders(!showBuilders)}
-          className="px-4 py-2 text-white bg-blue-500 rounded-md hover:bg-blue-600"
+          className="px-4 py-2 text-white bg-blue-500 rounded-md hover:bg-blue-600 mt-4"
         >
           {showBuilders ? "Hide Builders" : "Show Builders"}
         </button>
