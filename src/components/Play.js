@@ -5,6 +5,8 @@ import {
   initialDummyBoard,
   buildingColorMap,
   buildingNames,
+  buildingIcons,
+  buildingIconColors,
   players,
   parseObservationForBoard,
   parseAndDisplayInfo
@@ -148,11 +150,8 @@ const Play = () => {
             {boardState.map((row, rowIndex) => (
               <tr key={`row-${rowIndex}`}>
                 {row.map((cell, cellIndex) => {
-                  const cellName =
-                    cell.type === -1
-                      ? "Empty"
-                      : buildingNames[cell.type.toString()] ||
-                      `Type ${cell.type}`;
+                  const IconComponent = buildingIcons[cell.type] || buildingIcons[-1];
+                  const iconColor = buildingIconColors[cell.type] || buildingIconColors[-1];
                   const bgClass = buildingColorMap[cell.type] || "bg-gray-100";
                   const highlight =
                     selectedParcel &&
@@ -166,13 +165,17 @@ const Play = () => {
                       className={`w-16 h-16 border border-gray-300 text-center ${bgClass} ${highlight} cursor-pointer hover:bg-opacity-80`}
                       onClick={() => handleParcelClick(rowIndex, cellIndex, cell)}
                     >
-                      <div className="flex flex-col items-center justify-center h-full">
-                        <span className="text-xs font-medium">
-                          {cellName}
-                        </span>
-                        <span className="text-xs text-gray-500">
-                          {cell.owner ? cell.owner : ""}
-                        </span>
+                      <div className="flex flex-col items-center justify-center h-full relative">
+                        <IconComponent 
+                          size={32} 
+                          color={iconColor}
+                          className="mb-1"
+                        />
+                        {cell.owner && (
+                          <span className="text-xs text-gray-600 font-bold absolute bottom-0">
+                            {cell.owner}
+                          </span>
+                        )}
                       </div>
                     </td>
                   );

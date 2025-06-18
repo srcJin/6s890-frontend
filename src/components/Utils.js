@@ -1,5 +1,15 @@
 // src/components/Utils.js
 
+// Import Ionicons 5 filled icons
+import { 
+  IoLeaf, 
+  IoHome, 
+  IoPeople, 
+  IoSunny, 
+  IoShield,
+  IoSquare 
+} from "react-icons/io5";
+
 // Initial dummy board (8x8 grid for scaled-up environment)
 export const initialDummyBoard = [
   [
@@ -58,6 +68,26 @@ export const buildingNames = {
   3: "Solar Grid",
   4: "Flood Barrier",
   "-1": "Empty",
+};
+
+// Icon mapping for building types
+export const buildingIcons = {
+  [-1]: IoSquare,     // Empty cell
+  0: IoLeaf,          // Green Park
+  1: IoHome,          // Resilient House
+  2: IoPeople,        // Community Hub
+  3: IoSunny,         // Solar Grid
+  4: IoShield,        // Flood Barrier
+};
+
+// Darker icon colors corresponding to cell backgrounds
+export const buildingIconColors = {
+  [-1]: "#6b7280",    // Gray-500 for empty cells
+  0: "#065f46",       // Green-800 for green background
+  1: "#1e3a8a",       // Blue-800 for blue background
+  2: "#c2410c",       // Orange-700 for orange background
+  3: "#a16207",       // Yellow-700 for yellow background
+  4: "#6b21a8",       // Purple-800 for purple background
 };
 
 // Terrain type symbols and descriptions
