@@ -16,7 +16,8 @@ import {
   IoMedkit,
   IoSchool,
   IoFlame,
-  IoFlash
+  IoFlash,
+  IoStorefront
 } from "react-icons/io5";
 
 // Initial dummy board (8x8 grid for scaled-up environment)
@@ -58,24 +59,25 @@ export const initialDummyBoard = [
 // Mapping from building type to colors for urban resilience buildings
 export const buildingColorMap = {
   [-1]: "bg-gray-100",      // Empty
-  0: "bg-green-300",        // GreenPark - vibrant green for sustainability
-  1: "bg-blue-300",         // ResilientHouse - blue for resilient housing
-  2: "bg-orange-300",       // CommunityHub - orange for community gathering
-  3: "bg-yellow-300",       // SolarGrid - yellow for solar energy
-  4: "bg-purple-300",       // FloodBarrier - purple for protective infrastructure
+  0: "bg-blue-300",         // House - standard blue for residential
+  1: "bg-red-300",          // Shop - red for commercial 
+  2: "bg-green-300",        // GreenPark - vibrant green for sustainability
+  3: "bg-orange-300",       // CommunityHub - orange for community gathering
+  4: "bg-yellow-300",       // SolarGrid - yellow for solar energy
+  5: "bg-purple-300",       // FloodBarrier - purple for protective infrastructure
   
-  // Terrain types (5-9)
-  5: "bg-blue-500",         // River - deep blue
-  6: "bg-gray-600",         // Mountain - dark gray
-  7: "bg-blue-400",         // Lake - lighter blue
-  8: "bg-gray-500",         // Highway - medium gray
-  9: "bg-yellow-600",       // Railway - dark yellow
+  // Terrain types (6-10)
+  6: "bg-blue-500",         // River - deep blue
+  7: "bg-gray-600",         // Mountain - dark gray
+  8: "bg-blue-400",         // Lake - lighter blue
+  9: "bg-gray-500",         // Highway - medium gray
+  10: "bg-yellow-600",      // Railway - dark yellow
   
-  // Infrastructure types (10-13)
-  10: "bg-red-300",         // Hospital - red
-  11: "bg-green-400",       // School - green
-  12: "bg-red-500",         // FireStation - dark red
-  13: "bg-yellow-500",      // PowerPlant - yellow
+  // Infrastructure types (11-14)
+  11: "bg-red-300",         // Hospital - red
+  12: "bg-green-400",       // School - green
+  13: "bg-red-500",         // FireStation - dark red
+  14: "bg-yellow-500",      // PowerPlant - yellow
   
   // Special terrain and infrastructure colors (legacy)
   "terrain": "bg-gray-400", // Non-buildable terrain
@@ -84,71 +86,74 @@ export const buildingColorMap = {
 
 // Building type names for display (urban resilience focused)
 export const buildingNames = {
-  0: "Green Park",
-  1: "Resilient House", 
-  2: "Community Hub",
-  3: "Solar Grid",
-  4: "Flood Barrier",
+  0: "House",
+  1: "Shop", 
+  2: "Green Park",
+  3: "Community Hub",
+  4: "Solar Grid",
+  5: "Flood Barrier",
   "-1": "Empty",
   
-  // Terrain types (5-9)
-  5: "River",
-  6: "Mountain",
-  7: "Lake", 
-  8: "Highway",
-  9: "Railway",
+  // Terrain types (6-10)
+  6: "River",
+  7: "Mountain",
+  8: "Lake", 
+  9: "Highway",
+  10: "Railway",
   
-  // Infrastructure types (10-13)
-  10: "Hospital",
-  11: "School",
-  12: "Fire Station",
-  13: "Power Plant",
+  // Infrastructure types (11-14)
+  11: "Hospital",
+  12: "School",
+  13: "Fire Station",
+  14: "Power Plant",
 };
 
 // Icon mapping for building types
 export const buildingIcons = {
   [-1]: IoSquare,     // Empty cell
-  0: IoLeaf,          // Green Park
-  1: IoHome,          // Resilient House
-  2: IoPeople,        // Community Hub
-  3: IoSunny,         // Solar Grid
-  4: IoShield,        // Flood Barrier
+  0: IoHome,          // House
+  1: IoStorefront,    // Shop
+  2: IoLeaf,          // Green Park
+  3: IoPeople,        // Community Hub
+  4: IoSunny,         // Solar Grid
+  5: IoShield,        // Flood Barrier
   
-  // Terrain types (5-9)
-  5: IoWater,         // River
-  6: IoTriangle,      // Mountain
-  7: IoEllipse,       // Lake
-  8: IoRemove,        // Highway
-  9: IoTrain,         // Railway
+  // Terrain types (6-10)
+  6: IoWater,         // River
+  7: IoTriangle,      // Mountain
+  8: IoEllipse,       // Lake
+  9: IoRemove,        // Highway
+  10: IoTrain,        // Railway
   
-  // Infrastructure types (10-13)
-  10: IoMedkit,       // Hospital
-  11: IoSchool,       // School
-  12: IoFlame,        // Fire Station
-  13: IoFlash,        // Power Plant
+  // Infrastructure types (11-14)
+  11: IoMedkit,       // Hospital
+  12: IoSchool,       // School
+  13: IoFlame,        // Fire Station
+  14: IoFlash,        // Power Plant
 };
 
 // Darker icon colors corresponding to cell backgrounds
 export const buildingIconColors = {
-  [-1]: "#6b7280",    // Gray-500 for empty cells
-  0: "#065f46",       // Green-800 for green background
-  1: "#1e3a8a",       // Blue-800 for blue background
-  2: "#c2410c",       // Orange-700 for orange background
-  3: "#a16207",       // Yellow-700 for yellow background
-  4: "#6b21a8",       // Purple-800 for purple background
+  [-1]: "transparent",    // transparent
+  0: "#1e3a8a",       // Blue-800 for house (blue background)
+  1: "#b91c1c",       // Red-700 for shop (red background)
+  2: "#065f46",       // Green-800 for green park (green background)
+  3: "#c2410c",       // Orange-700 for community hub (orange background)
+  4: "#a16207",       // Yellow-700 for solar grid (yellow background)
+  5: "#6b21a8",       // Purple-800 for flood barrier (purple background)
   
-  // Terrain types (5-9)
-  5: "#1e40af",       // Blue-800 for river
-  6: "#374151",       // Gray-700 for mountain
-  7: "#2563eb",       // Blue-600 for lake
-  8: "#4b5563",       // Gray-600 for highway
-  9: "#d97706",       // Amber-600 for railway
+  // Terrain types (6-10)
+  6: "#1e40af",       // Blue-800 for river
+  7: "#374151",       // Gray-700 for mountain
+  8: "#2563eb",       // Blue-600 for lake
+  9: "#4b5563",       // Gray-600 for highway
+  10: "#d97706",      // Amber-600 for railway
   
-  // Infrastructure types (10-13)
-  10: "#dc2626",      // Red-600 for hospital
-  11: "#16a34a",      // Green-600 for school
-  12: "#b91c1c",      // Red-700 for fire station
-  13: "#ca8a04",      // Yellow-600 for power plant
+  // Infrastructure types (11-14)
+  11: "#dc2626",      // Red-600 for hospital
+  12: "#16a34a",      // Green-600 for school
+  13: "#b91c1c",      // Red-700 for fire station
+  14: "#ca8a04",      // Yellow-600 for power plant
 };
 
 // Terrain type symbols and descriptions
@@ -233,11 +238,11 @@ export const parseObservationForBoard = (observation) => {
         
         if (infraVal !== -1) {
           // Infrastructure takes priority - map to special building types
-          cellType = infraVal + 10; // Infrastructure types: 10-13
+          cellType = infraVal + 11; // Infrastructure types: 11-14
           cellOwner = "INFRA"; // Special owner for infrastructure
         } else if (terrainVal !== -1) {
           // Terrain takes priority over regular buildings
-          cellType = terrainVal + 5; // Terrain types: 5-9
+          cellType = terrainVal + 6; // Terrain types: 6-10
           cellOwner = "TERRAIN"; // Special owner for terrain
         }
         
