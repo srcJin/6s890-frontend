@@ -184,7 +184,7 @@ const Simulation = () => {
                           color={iconColor}
                           className="mb-1"
                         />
-                        {showBuilders && cell.owner && (
+                        {showBuilders && cell.owner && cell.owner !== "TERRAIN" && cell.owner !== "INFRA" && (
                           <span className="text-xs text-gray-600 font-bold absolute bottom-0">
                             {cell.owner}
                           </span>

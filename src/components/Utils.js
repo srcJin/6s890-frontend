@@ -7,7 +7,16 @@ import {
   IoPeople, 
   IoSunny, 
   IoShield,
-  IoSquare 
+  IoSquare,
+  IoWater,
+  IoTriangle,
+  IoEllipse,
+  IoRemove,
+  IoTrain,
+  IoMedkit,
+  IoSchool,
+  IoFlame,
+  IoFlash
 } from "react-icons/io5";
 
 // Initial dummy board (8x8 grid for scaled-up environment)
@@ -55,7 +64,20 @@ export const buildingColorMap = {
   3: "bg-yellow-300",       // SolarGrid - yellow for solar energy
   4: "bg-purple-300",       // FloodBarrier - purple for protective infrastructure
   
-  // Special terrain and infrastructure colors
+  // Terrain types (5-9)
+  5: "bg-blue-500",         // River - deep blue
+  6: "bg-gray-600",         // Mountain - dark gray
+  7: "bg-blue-400",         // Lake - lighter blue
+  8: "bg-gray-500",         // Highway - medium gray
+  9: "bg-yellow-600",       // Railway - dark yellow
+  
+  // Infrastructure types (10-13)
+  10: "bg-red-300",         // Hospital - red
+  11: "bg-green-400",       // School - green
+  12: "bg-red-500",         // FireStation - dark red
+  13: "bg-yellow-500",      // PowerPlant - yellow
+  
+  // Special terrain and infrastructure colors (legacy)
   "terrain": "bg-gray-400", // Non-buildable terrain
   "infrastructure": "bg-red-400", // Pre-built infrastructure
 };
@@ -68,6 +90,19 @@ export const buildingNames = {
   3: "Solar Grid",
   4: "Flood Barrier",
   "-1": "Empty",
+  
+  // Terrain types (5-9)
+  5: "River",
+  6: "Mountain",
+  7: "Lake", 
+  8: "Highway",
+  9: "Railway",
+  
+  // Infrastructure types (10-13)
+  10: "Hospital",
+  11: "School",
+  12: "Fire Station",
+  13: "Power Plant",
 };
 
 // Icon mapping for building types
@@ -78,6 +113,19 @@ export const buildingIcons = {
   2: IoPeople,        // Community Hub
   3: IoSunny,         // Solar Grid
   4: IoShield,        // Flood Barrier
+  
+  // Terrain types (5-9)
+  5: IoWater,         // River
+  6: IoTriangle,      // Mountain
+  7: IoEllipse,       // Lake
+  8: IoRemove,        // Highway
+  9: IoTrain,         // Railway
+  
+  // Infrastructure types (10-13)
+  10: IoMedkit,       // Hospital
+  11: IoSchool,       // School
+  12: IoFlame,        // Fire Station
+  13: IoFlash,        // Power Plant
 };
 
 // Darker icon colors corresponding to cell backgrounds
@@ -88,6 +136,19 @@ export const buildingIconColors = {
   2: "#c2410c",       // Orange-700 for orange background
   3: "#a16207",       // Yellow-700 for yellow background
   4: "#6b21a8",       // Purple-800 for purple background
+  
+  // Terrain types (5-9)
+  5: "#1e40af",       // Blue-800 for river
+  6: "#374151",       // Gray-700 for mountain
+  7: "#2563eb",       // Blue-600 for lake
+  8: "#4b5563",       // Gray-600 for highway
+  9: "#d97706",       // Amber-600 for railway
+  
+  // Infrastructure types (10-13)
+  10: "#dc2626",      // Red-600 for hospital
+  11: "#16a34a",      // Green-600 for school
+  12: "#b91c1c",      // Red-700 for fire station
+  13: "#ca8a04",      // Yellow-600 for power plant
 };
 
 // Terrain type symbols and descriptions
@@ -117,13 +178,81 @@ export const players = {
 
 /**
  * parseObservationForBoard extracts board information from observation for 8x8 grid.
- * The observation structure needs to be updated based on the new backend format.
- * For now, we'll handle both the old flat format and new structured format.
+ * 
+ * Observation structure for scale-up environment (514 values total):
+ * 1. Grid data (S, W, R, C): 8×8×4 = 256 values
+ * 2. Resources: 2 values (money, reputation)
+ * 3. Builders: 8×8 = 64 values
+ * 4. Building types: 8×8 = 64 values  
+ * 5. Terrain matrix: 8×8 = 64 values
+ * 6. Infrastructure matrix: 8×8 = 64 values
  */
 export const parseObservationForBoard = (observation) => {
-  console.log("Parsing observation for 8x8 board:", observation);
+  console.log("Parsing observation for 8x8 board, length:", observation?.length);
   
-  // Handle structured observation format (dictionary-like)
+  // Handle flat observation format (array of numbers) from scale-up environment
+  if (Array.isArray(observation) && observation.length === 514) {
+    const gridDataSize = 8 * 8 * 4; // 256 values for grid data (S, W, R, C)
+    const resourcesSize = 2; // money, reputation
+    const gridSize = 8 * 8; // 64 values each for builders and building_types
+    
+    // Extract all sections from the observation
+    const buildersStart = gridDataSize + resourcesSize; // Start at index 258
+    const buildersEnd = buildersStart + gridSize; // End at index 322
+    const buildingTypesStart = buildersEnd; // Start at index 322  
+    const buildingTypesEnd = buildingTypesStart + gridSize; // End at index 386
+    const terrainStart = buildingTypesEnd; // Start at index 386
+    const terrainEnd = terrainStart + gridSize; // End at index 450
+    const infrastructureStart = terrainEnd; // Start at index 450
+    const infrastructureEnd = infrastructureStart + gridSize; // End at index 514
+    
+    const buildersFlat = observation.slice(buildersStart, buildersEnd);
+    const buildingTypesFlat = observation.slice(buildingTypesStart, buildingTypesEnd);
+    const terrainFlat = observation.slice(terrainStart, terrainEnd);
+    const infrastructureFlat = observation.slice(infrastructureStart, infrastructureEnd);
+    
+    console.log("Builders data:", buildersFlat.slice(0, 10), "...");
+    console.log("Building types data:", buildingTypesFlat.slice(0, 10), "...");
+    console.log("Terrain data:", terrainFlat.filter(x => x !== -1), "...");
+    console.log("Infrastructure data:", infrastructureFlat.filter(x => x !== -1), "...");
+    
+    const board = [];
+    for (let i = 0; i < 8; i++) {
+      const row = [];
+      for (let j = 0; j < 8; j++) {
+        const builderVal = buildersFlat[i * 8 + j];
+        const bType = buildingTypesFlat[i * 8 + j];
+        const terrainVal = terrainFlat[i * 8 + j];
+        const infraVal = infrastructureFlat[i * 8 + j];
+        
+        // Priority: Infrastructure > Terrain > Buildings
+        // Infrastructure types: Hospital=0, School=1, FireStation=2, PowerPlant=3
+        // Terrain types: River=0, Mountain=1, Lake=2, Highway=3, Railway=4
+        let cellType = bType; // Default to building type
+        let cellOwner = builderVal === -1 ? null : `P${builderVal + 1}`;
+        
+        if (infraVal !== -1) {
+          // Infrastructure takes priority - map to special building types
+          cellType = infraVal + 10; // Infrastructure types: 10-13
+          cellOwner = "INFRA"; // Special owner for infrastructure
+        } else if (terrainVal !== -1) {
+          // Terrain takes priority over regular buildings
+          cellType = terrainVal + 5; // Terrain types: 5-9
+          cellOwner = "TERRAIN"; // Special owner for terrain
+        }
+        
+        row.push({
+          owner: cellOwner,
+          type: cellType,
+        });
+      }
+      board.push(row);
+    }
+    console.log("Parsed scale-up observation board with terrain/infrastructure:", board);
+    return board;
+  }
+  
+  // Handle structured observation format (dictionary-like) - fallback
   if (observation && typeof observation === 'object' && observation.builders && observation.building_types) {
     const builders = observation.builders;
     const buildingTypes = observation.building_types;
@@ -145,40 +274,7 @@ export const parseObservationForBoard = (observation) => {
     return board;
   }
   
-  // Handle flat observation format (array of numbers)
-  if (Array.isArray(observation)) {
-    // For 8x8 grid: expect different indices for builders and building_types
-    // This will need to be adjusted based on actual backend observation format
-    const expectedLength = 8 * 8 * 4 + 2 + 8 * 8 + 8 * 8; // grid + resources + builders + building_types
-    
-    if (observation.length >= expectedLength) {
-      const gridSize = 8 * 8;
-      const gridDataSize = gridSize * 4; // 4 parameters: S, W, R, C
-      
-      // Extract builders and building types from the flat array
-      const buildersStart = gridDataSize + 2; // Skip grid data and resources
-      const buildersFlat = observation.slice(buildersStart, buildersStart + gridSize);
-      const buildingTypesFlat = observation.slice(buildersStart + gridSize, buildersStart + 2 * gridSize);
-      
-      const board = [];
-      for (let i = 0; i < 8; i++) {
-        const row = [];
-        for (let j = 0; j < 8; j++) {
-          const builderVal = buildersFlat[i * 8 + j];
-          const bType = buildingTypesFlat[i * 8 + j];
-          row.push({
-            owner: builderVal === -1 ? null : `P${builderVal + 1}`,
-            type: bType,
-          });
-        }
-        board.push(row);
-      }
-      console.log("Parsed flat observation board:", board);
-      return board;
-    }
-  }
-  
-  console.warn("Could not parse observation, using dummy board");
+  console.warn("Could not parse observation (length:", observation?.length, "), using dummy board");
   return initialDummyBoard;
 };
 
@@ -316,7 +412,7 @@ export const renderEnhancedCell = (cell, rowIndex, cellIndex, selectedParcel, on
           <span className="text-lg font-bold text-white">{cellContent}</span>
         )}
         <span className="text-xs font-medium">{cellName}</span>
-        {cell.owner && (
+        {cell.owner && cell.owner !== "TERRAIN" && cell.owner !== "INFRA" && (
           <span className="text-xs text-gray-600">{cell.owner}</span>
         )}
       </div>
