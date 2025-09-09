@@ -22,6 +22,14 @@ const Navbar = ({ activePage, setActivePage }) => {
       >
         Play
       </button>
+      <button
+        className={`px-4 py-2 rounded-md ${
+          activePage === "Legend" ? "bg-blue-800" : "bg-blue-500 hover:bg-blue-700"
+        }`}
+        onClick={() => setActivePage("Legend")}
+      >
+        Legend
+      </button>
     </nav>
   );
 };

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Simulation from "@/components/Simulation";
 import Play from "@/components/Play";
+import Legend from "@/components/Legend";
 import Navbar from "@/components/Navbar";
 
 export default function Home() {
@@ -17,7 +18,15 @@ export default function Home() {
 
       {/* Render the active component */}
       <div className="">
-        {activePage === "Simulation" ? <Simulation /> : <Play />}
+        {activePage === "Simulation" ? (
+          <Simulation />
+        ) : activePage === "Play" ? (
+          <Play />
+        ) : activePage === "Legend" ? (
+          <Legend />
+        ) : (
+          <Simulation />
+        )}
       </div>
     </div>
   );

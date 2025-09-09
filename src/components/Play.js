@@ -5,6 +5,8 @@ import {
   initialDummyBoard,
   buildingColorMap,
   buildingNames,
+  buildingIcons,
+  buildingIconColors,
   players,
   parseObservationForBoard,
   parseAndDisplayInfo
@@ -153,17 +155,8 @@ const Play = () => {
             {boardState.map((row, rowIndex) => (
               <tr key={`row-${rowIndex}`}>
                 {row.map((cell, cellIndex) => {
-                  // Use the parsed name or fall back to type-based lookup
-                  const cellName = cell.name || (
-                    cell.type === -1
-                      ? "Empty"
-                      : buildingNames[cell.type.toString()] || `Type ${cell.type}`
-                  );
-                  
-                  // Get the appropriate icon component for this cell
-                  const IconComponent = buildingIconComponents[cell.type] || 
-                                      (cell.name ? buildingIconComponents[cell.name] : null);
-                  
+                  const IconComponent = buildingIcons[cell.type] || buildingIcons[-1];
+                  const iconColor = buildingIconColors[cell.type] || buildingIconColors[-1];
                   const bgClass = buildingColorMap[cell.type] || "bg-gray-100";
                   const highlight =
                     selectedParcel &&
@@ -177,28 +170,15 @@ const Play = () => {
                       className={`w-16 h-16 border border-gray-300 text-center ${cell.type === -1 ? 'bg-gray-200' : bgClass} ${highlight} cursor-pointer hover:bg-opacity-80 relative`}
                       onClick={() => handleParcelClick(rowIndex, cellIndex, cell)}
                     >
-                      <div className="flex flex-col items-center justify-center h-full w-full absolute inset-0">
-                        {/* Display React Icon only for non-empty cells */}
-                        {cell.type !== -1 && IconComponent && (
-                          <IconComponent 
-                            size={40}
-                            style={iconStyles[cell.type] || (cell.name ? iconStyles[cell.name] : {})}
-                            title={cellName}
-                          />
-                        )}
-                        {/* Builder agent indicator in top right corner with different colors */}
-                        {cell.owner && (
-                          <span 
-                            className={`text-xs font-bold absolute top-0 right-0 w-4 h-4 flex items-center justify-center rounded-bl text-white ${
-                              cell.owner === 'P1' ? 'bg-green-600' :
-                              cell.owner === 'P2' ? 'bg-blue-600' :
-                              cell.owner === 'P3' ? 'bg-red-600' :
-                              cell.owner === 'P4' ? 'bg-purple-600' :
-                              'bg-gray-600'
-                            }`}
-                            title={`Built by ${cell.owner}`}
-                          >
-                            {cell.owner.replace('P', '')}
+                      <div className="flex flex-col items-center justify-center h-full relative">
+                        <IconComponent 
+                          size={32} 
+                          color={iconColor}
+                          className="mb-1"
+                        />
+                        {cell.owner && cell.owner !== "TERRAIN" && cell.owner !== "INFRA" && (
+                          <span className="text-xs text-gray-600 font-bold absolute bottom-0">
+                            {cell.owner}
                           </span>
                         )}
                       </div>
