@@ -17,132 +17,129 @@ import {
   IoSchool,
   IoFlame,
   IoFlash,
-  IoStorefront
+  IoStorefront,
+  IoConstruct,
+  IoBusinessOutline
 } from "react-icons/io5";
 
-// Initial dummy board (8x8 grid for scaled-up environment)
-export const initialDummyBoard = [
-  [
-    { owner: null, type: -1 }, { owner: null, type: -1 }, { owner: null, type: -1 }, { owner: null, type: -1 },
-    { owner: null, type: -1 }, { owner: null, type: -1 }, { owner: null, type: -1 }, { owner: null, type: -1 },
-  ],
-  [
-    { owner: null, type: -1 }, { owner: null, type: -1 }, { owner: null, type: -1 }, { owner: null, type: -1 },
-    { owner: null, type: -1 }, { owner: null, type: -1 }, { owner: null, type: -1 }, { owner: null, type: -1 },
-  ],
-  [
-    { owner: null, type: -1 }, { owner: null, type: -1 }, { owner: null, type: -1 }, { owner: null, type: -1 },
-    { owner: null, type: -1 }, { owner: null, type: -1 }, { owner: null, type: -1 }, { owner: null, type: -1 },
-  ],
-  [
-    { owner: null, type: -1 }, { owner: null, type: -1 }, { owner: null, type: -1 }, { owner: null, type: -1 },
-    { owner: null, type: -1 }, { owner: null, type: -1 }, { owner: null, type: -1 }, { owner: null, type: -1 },
-  ],
-  [
-    { owner: null, type: -1 }, { owner: null, type: -1 }, { owner: null, type: -1 }, { owner: null, type: -1 },
-    { owner: null, type: -1 }, { owner: null, type: -1 }, { owner: null, type: -1 }, { owner: null, type: -1 },
-  ],
-  [
-    { owner: null, type: -1 }, { owner: null, type: -1 }, { owner: null, type: -1 }, { owner: null, type: -1 },
-    { owner: null, type: -1 }, { owner: null, type: -1 }, { owner: null, type: -1 }, { owner: null, type: -1 },
-  ],
-  [
-    { owner: null, type: -1 }, { owner: null, type: -1 }, { owner: null, type: -1 }, { owner: null, type: -1 },
-    { owner: null, type: -1 }, { owner: null, type: -1 }, { owner: null, type: -1 }, { owner: null, type: -1 },
-  ],
-  [
-    { owner: null, type: -1 }, { owner: null, type: -1 }, { owner: null, type: -1 }, { owner: null, type: -1 },
-    { owner: null, type: -1 }, { owner: null, type: -1 }, { owner: null, type: -1 }, { owner: null, type: -1 },
-  ],
-];
+// Initial dummy board (12x12 grid for koto environment)
+export const initialDummyBoard = Array(12).fill().map(() => 
+  Array(12).fill().map(() => ({ owner: null, type: -1 }))
+);
 
-// Mapping from building type to colors for urban resilience buildings
+// Mapping from building type to colors for koto environment (unified TERRAIN_AND_PROJECTS)
 export const buildingColorMap = {
-  [-1]: "bg-gray-100",      // Empty
-  0: "bg-blue-300",         // House - standard blue for residential
-  1: "bg-red-300",          // Shop - red for commercial 
-  2: "bg-green-300",        // GreenPark - vibrant green for sustainability
-  3: "bg-orange-300",       // CommunityHub - orange for community gathering
-  4: "bg-yellow-300",       // SolarGrid - yellow for solar energy
-  5: "bg-purple-300",       // FloodBarrier - purple for protective infrastructure
+  // Terrain types
+  0: "bg-gray-100",         // Empty - buildable land
+  1: "bg-blue-500",         // Water - natural water body
+  2: "bg-gray-600",         // Road - transportation infrastructure
   
-  // Terrain types (6-10)
-  6: "bg-blue-500",         // River - deep blue
-  7: "bg-gray-600",         // Mountain - dark gray
-  8: "bg-blue-400",         // Lake - lighter blue
-  9: "bg-gray-500",         // Highway - medium gray
-  10: "bg-yellow-600",      // Railway - dark yellow
+  // Basic development projects
+  100: "bg-blue-300",       // House - residential housing  
+  101: "bg-red-300",        // Shop - commercial retail
+  102: "bg-purple-400",     // Office - commercial office building
+  103: "bg-orange-600",     // Factory - industrial manufacturing
   
-  // Infrastructure types (11-14)
-  11: "bg-red-300",         // Hospital - red
-  12: "bg-green-400",       // School - green
-  13: "bg-red-500",         // FireStation - dark red
-  14: "bg-yellow-500",      // PowerPlant - yellow
+  // Resilience projects
+  201: "bg-green-400",      // Park - green park for recreation
+  202: "bg-orange-300",     // Shelter - community resilience center
+  203: "bg-yellow-400",     // Watergate - renewable energy infrastructure
+  204: "bg-purple-500",     // FloodBarrier - climate protection infrastructure
   
-  // Special terrain and infrastructure colors (legacy)
+  // Legacy support
+  [-1]: "bg-gray-100",      // Empty (fallback)
   "terrain": "bg-gray-400", // Non-buildable terrain
   "infrastructure": "bg-red-400", // Pre-built infrastructure
 };
 
-// Building type names for display (urban resilience focused)
+// Building type names for display (koto environment unified system)
 export const buildingNames = {
-  0: "House",
-  1: "Shop", 
-  2: "Green Park",
-  3: "Community Hub",
-  4: "Solar Grid",
-  5: "Flood Barrier",
-  "-1": "Empty",
+  // Terrain types
+  0: "Empty",
+  1: "Water", 
+  2: "Road",
   
-  // Terrain types (6-10)
-  6: "River",
-  7: "Mountain",
-  8: "Lake", 
+  // Basic development projects
+  100: "House",
+  101: "Shop",
+  102: "Office", 
+  103: "Factory",
+  
+  // Resilience projects
+  201: "Park",
+  202: "Shelter",
+  203: "Watergate", 
+  204: "Flood Barrier",
+  
+  // Legacy support
+  "-1": "Empty", 
   9: "Highway",
   10: "Railway",
   
-  // Infrastructure types (11-14)
+  // Infrastructure types (11-14) - legacy
   11: "Hospital",
-  12: "School",
+  12: "School", 
   13: "Fire Station",
   14: "Power Plant",
 };
 
-// Icon mapping for building types
+// Icon mapping for building types (koto environment)
 export const buildingIcons = {
-  [-1]: IoSquare,     // Empty cell
-  0: IoHome,          // House
-  1: IoStorefront,    // Shop
-  2: IoLeaf,          // Green Park
-  3: IoPeople,        // Community Hub
-  4: IoSunny,         // Solar Grid
-  5: IoShield,        // Flood Barrier
+  // Terrain types
+  0: IoSquare,        // Empty - buildable land
+  1: IoWater,         // Water - natural water body  
+  2: IoRemove,        // Road - transportation infrastructure
   
-  // Terrain types (6-10)
+  // Basic development projects
+  100: IoHome,           // House - residential housing
+  101: IoStorefront,     // Shop - commercial retail
+  102: IoBusinessOutline, // Office - commercial office building
+  103: IoFlame,          // Factory - industrial manufacturing
+  
+  // Resilience projects  
+  201: IoLeaf,           // Park - green park for recreation
+  202: IoShield,         // Shelter - community resilience center
+  203: IoSunny,          // Watergate - renewable energy infrastructure  
+  204: IoConstruct,      // FloodBarrier - climate protection infrastructure
+  
+  // Legacy support
+  [-1]: IoSquare,     // Empty cell (fallback)
+  
+  // Legacy terrain/infrastructure (6-14)
   6: IoWater,         // River
   7: IoTriangle,      // Mountain
   8: IoEllipse,       // Lake
   9: IoRemove,        // Highway
   10: IoTrain,        // Railway
-  
-  // Infrastructure types (11-14)
   11: IoMedkit,       // Hospital
   12: IoSchool,       // School
   13: IoFlame,        // Fire Station
   14: IoFlash,        // Power Plant
 };
 
-// Darker icon colors corresponding to cell backgrounds
+// Darker icon colors corresponding to cell backgrounds (koto environment)
 export const buildingIconColors = {
-  [-1]: "transparent",    // transparent
-  0: "#1e3a8a",       // Blue-800 for house (blue background)
-  1: "#b91c1c",       // Red-700 for shop (red background)
-  2: "#065f46",       // Green-800 for green park (green background)
-  3: "#c2410c",       // Orange-700 for community hub (orange background)
-  4: "#a16207",       // Yellow-700 for solar grid (yellow background)
-  5: "#6b21a8",       // Purple-800 for flood barrier (purple background)
+  // Terrain types
+  0: "transparent",   // Empty - transparent
+  1: "#1e40af",       // Water - Blue-800  
+  2: "#4b5563",       // Road - Gray-600
   
-  // Terrain types (6-10)
+  // Basic development projects
+  100: "#1e3a8a",     // House - Blue-800 (blue background)
+  101: "#b91c1c",     // Shop - Red-700 (red background)
+  102: "#6b21a8",     // Office - Purple-800 (purple background)
+  103: "#c2410c",     // Factory - Orange-700 (orange background)
+  
+  // Resilience projects
+  201: "#065f46",     // Park - Green-800 (green background)
+  202: "#c2410c",     // Shelter - Orange-700 (orange background)  
+  203: "#a16207",     // Watergate - Yellow-700 (yellow background)
+  204: "#6b21a8",     // FloodBarrier - Purple-800 (purple background)
+  
+  // Legacy support
+  [-1]: "transparent", // transparent (fallback)
+  
+  // Legacy terrain/infrastructure (6-14)
   6: "#1e40af",       // Blue-800 for river
   7: "#374151",       // Gray-700 for mountain
   8: "#2563eb",       // Blue-600 for lake
@@ -182,90 +179,85 @@ export const players = {
 };
 
 /**
- * parseObservationForBoard extracts board information from observation for 8x8 grid.
+ * parseObservationForBoard extracts board information from observation for 12x12 koto grid.
  * 
- * Observation structure for scale-up environment (514 values total):
- * 1. Grid data (S, W, R, C): 8×8×4 = 256 values
+ * Observation structure for koto environment:
+ * 1. Grid data (G, V, D, A, S, F): 12×12×6 = 864 values (6-parameter system)
  * 2. Resources: 2 values (money, reputation)
- * 3. Builders: 8×8 = 64 values
- * 4. Building types: 8×8 = 64 values  
- * 5. Terrain matrix: 8×8 = 64 values
- * 6. Infrastructure matrix: 8×8 = 64 values
+ * 3. Builders: 12×12 = 144 values
+ * 4. Building types: 12×12 = 144 values  
+ * 5. Grid layout: 12×12 = 144 values (unified TERRAIN_AND_PROJECTS)
  */
 export const parseObservationForBoard = (observation) => {
-  console.log("Parsing observation for 8x8 board, length:", observation?.length);
+  console.log("Parsing observation for 12x12 koto board, length:", observation?.length);
   
-  // Handle flat observation format (array of numbers) from scale-up environment
-  if (Array.isArray(observation) && observation.length === 514) {
-    const gridDataSize = 8 * 8 * 4; // 256 values for grid data (S, W, R, C)
+  // Handle flat observation format (array of numbers) from koto environment
+  if (Array.isArray(observation)) {
+    const gridDataSize = 12 * 12 * 6; // 864 values for grid data (G, V, D, A, S, F)
     const resourcesSize = 2; // money, reputation
-    const gridSize = 8 * 8; // 64 values each for builders and building_types
+    const gridSize = 12 * 12; // 144 values each for builders and building_types
     
-    // Extract all sections from the observation
-    const buildersStart = gridDataSize + resourcesSize; // Start at index 258
-    const buildersEnd = buildersStart + gridSize; // End at index 322
-    const buildingTypesStart = buildersEnd; // Start at index 322  
-    const buildingTypesEnd = buildingTypesStart + gridSize; // End at index 386
-    const terrainStart = buildingTypesEnd; // Start at index 386
-    const terrainEnd = terrainStart + gridSize; // End at index 450
-    const infrastructureStart = terrainEnd; // Start at index 450
-    const infrastructureEnd = infrastructureStart + gridSize; // End at index 514
+    const expectedLength = gridDataSize + resourcesSize + (gridSize * 3); // 864 + 2 + 432 = 1298
     
-    const buildersFlat = observation.slice(buildersStart, buildersEnd);
-    const buildingTypesFlat = observation.slice(buildingTypesStart, buildingTypesEnd);
-    const terrainFlat = observation.slice(terrainStart, terrainEnd);
-    const infrastructureFlat = observation.slice(infrastructureStart, infrastructureEnd);
-    
-    console.log("Builders data:", buildersFlat.slice(0, 10), "...");
-    console.log("Building types data:", buildingTypesFlat.slice(0, 10), "...");
-    console.log("Terrain data:", terrainFlat.filter(x => x !== -1), "...");
-    console.log("Infrastructure data:", infrastructureFlat.filter(x => x !== -1), "...");
-    
-    const board = [];
-    for (let i = 0; i < 8; i++) {
-      const row = [];
-      for (let j = 0; j < 8; j++) {
-        const builderVal = buildersFlat[i * 8 + j];
-        const bType = buildingTypesFlat[i * 8 + j];
-        const terrainVal = terrainFlat[i * 8 + j];
-        const infraVal = infrastructureFlat[i * 8 + j];
-        
-        // Priority: Infrastructure > Terrain > Buildings
-        // Infrastructure types: Hospital=0, School=1, FireStation=2, PowerPlant=3
-        // Terrain types: River=0, Mountain=1, Lake=2, Highway=3, Railway=4
-        let cellType = bType; // Default to building type
-        let cellOwner = builderVal === -1 ? null : `P${builderVal + 1}`;
-        
-        if (infraVal !== -1) {
-          // Infrastructure takes priority - map to special building types
-          cellType = infraVal + 11; // Infrastructure types: 11-14
-          cellOwner = "INFRA"; // Special owner for infrastructure
-        } else if (terrainVal !== -1) {
-          // Terrain takes priority over regular buildings
-          cellType = terrainVal + 6; // Terrain types: 6-10
-          cellOwner = "TERRAIN"; // Special owner for terrain
+    if (observation.length >= expectedLength - 100) { // Allow some tolerance
+      // Extract all sections from the observation
+      const buildersStart = gridDataSize + resourcesSize; // Start after grid data + resources
+      const buildersEnd = buildersStart + gridSize; 
+      const buildingTypesStart = buildersEnd;  
+      const buildingTypesEnd = buildingTypesStart + gridSize; 
+      const gridLayoutStart = buildingTypesEnd; 
+      const gridLayoutEnd = gridLayoutStart + gridSize; 
+      
+      const buildersFlat = observation.slice(buildersStart, buildersEnd);
+      const buildingTypesFlat = observation.slice(buildingTypesStart, buildingTypesEnd);
+      const gridLayoutFlat = observation.slice(gridLayoutStart, gridLayoutEnd);
+      
+      console.log("Koto - Builders data:", buildersFlat.slice(0, 10), "...");
+      console.log("Koto - Building types data:", buildingTypesFlat.slice(0, 10), "...");
+      console.log("Koto - Grid layout data:", gridLayoutFlat.filter(x => x !== 0).slice(0, 10), "...");
+      
+      const board = [];
+      for (let i = 0; i < 12; i++) {
+        const row = [];
+        for (let j = 0; j < 12; j++) {
+          const builderVal = buildersFlat[i * 12 + j];
+          const bType = buildingTypesFlat[i * 12 + j];
+          const gridVal = gridLayoutFlat[i * 12 + j];
+          
+          // In koto, the grid layout determines the cell type (unified TERRAIN_AND_PROJECTS)
+          // Use grid layout value as the primary type, fall back to building type
+          let cellType = gridVal || bType || 0; // Default to Empty (0)
+          let cellOwner = builderVal === -1 ? null : `P${builderVal + 1}`;
+          
+          // Set special owners for terrain types
+          if (cellType === 1) { // Water
+            cellOwner = "TERRAIN";
+          } else if (cellType === 2) { // Road
+            cellOwner = "TERRAIN";
+          }
+          
+          row.push({
+            owner: cellOwner,
+            type: cellType,
+          });
         }
-        
-        row.push({
-          owner: cellOwner,
-          type: cellType,
-        });
+        board.push(row);
       }
-      board.push(row);
+      console.log("Parsed koto observation board:", board);
+      return board;
     }
-    console.log("Parsed scale-up observation board with terrain/infrastructure:", board);
-    return board;
   }
   
-  // Handle structured observation format (dictionary-like) - fallback
+  // Handle structured observation format (dictionary-like) - fallback for 12x12
   if (observation && typeof observation === 'object' && observation.builders && observation.building_types) {
     const builders = observation.builders;
     const buildingTypes = observation.building_types;
+    const gridSize = builders.length || 12; // Default to 12x12
     
     const board = [];
-    for (let i = 0; i < 8; i++) {
+    for (let i = 0; i < gridSize; i++) {
       const row = [];
-      for (let j = 0; j < 8; j++) {
+      for (let j = 0; j < gridSize; j++) {
         const builderVal = builders[i][j];
         const bType = buildingTypes[i][j];
         row.push({
@@ -359,6 +351,81 @@ export const parseAndDisplayInfo = (info) => {
           );
         }
       })}
+    </div>
+  );
+};
+
+// Parse and display 6-parameter urban resilience system (G, V, D, A, S, F)
+export const parseKotoParameters = (observation) => {
+  if (!Array.isArray(observation) || observation.length < 864) {
+    return null;
+  }
+  
+  // Extract grid data (first 864 values: 12x12x6 parameters)
+  const gridData = observation.slice(0, 864);
+  
+  // Calculate average values for each parameter across the entire grid
+  const parameters = { G: 0, V: 0, D: 0, A: 0, S: 0, F: 0 };
+  const paramNames = ['G', 'V', 'D', 'A', 'S', 'F'];
+  
+  for (let i = 0; i < 12; i++) {
+    for (let j = 0; j < 12; j++) {
+      for (let param = 0; param < 6; param++) {
+        const index = (i * 12 + j) * 6 + param;
+        parameters[paramNames[param]] += gridData[index];
+      }
+    }
+  }
+  
+  // Average across all grid cells
+  const numCells = 144; // 12x12
+  Object.keys(parameters).forEach(key => {
+    parameters[key] = parameters[key] / numCells;
+  });
+  
+  return parameters;
+};
+
+// Display component for 6-parameter system
+export const renderParameterDisplay = (parameters) => {
+  if (!parameters) return null;
+  
+  const parameterDescriptions = {
+    G: { name: "Greenery", color: "text-green-600", description: "Urban green spaces, biodiversity" },
+    V: { name: "Vitality", color: "text-blue-600", description: "Economic activity, social vibrancy" },
+    D: { name: "Density", color: "text-purple-600", description: "Population density, development" },
+    A: { name: "Adaptability", color: "text-orange-600", description: "Climate adaptation capacity" },
+    S: { name: "Sustainability", color: "text-teal-600", description: "Environmental footprint" },
+    F: { name: "Flood Resistance", color: "text-indigo-600", description: "Disaster preparedness" }
+  };
+  
+  return (
+    <div className="bg-white p-4 rounded-lg shadow-md">
+      <h3 className="text-lg font-semibold mb-3">Urban Resilience Parameters</h3>
+      <div className="grid grid-cols-2 gap-3">
+        {Object.entries(parameters).map(([key, value]) => {
+          const param = parameterDescriptions[key];
+          const normalizedValue = Math.max(0, Math.min(100, (value + 50) * 0.4)); // Normalize -50 to 250 range to 0-100
+          
+          return (
+            <div key={key} className="flex flex-col">
+              <div className="flex justify-between items-center mb-1">
+                <span className={`font-semibold ${param.color}`}>
+                  {key} - {param.name}
+                </span>
+                <span className="text-sm font-mono">{value.toFixed(1)}</span>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-2">
+                <div 
+                  className={`h-2 rounded-full bg-gradient-to-r ${param.color.replace('text-', 'from-')} to-gray-300`}
+                  style={{ width: `${normalizedValue}%` }}
+                ></div>
+              </div>
+              <span className="text-xs text-gray-500 mt-1">{param.description}</span>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 };

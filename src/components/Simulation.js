@@ -9,7 +9,9 @@ import {
   buildingIconColors,
   players,
   parseObservationForBoard,
-  parseAndDisplayInfo
+  parseAndDisplayInfo,
+  parseKotoParameters,
+  renderParameterDisplay
 } from "../components/Utils";
 
 import {
@@ -20,8 +22,8 @@ import {
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL ||
   (process.env.NODE_ENV === "development"
-    ? "http://127.0.0.1:5888"
-    : "https://simcity-mvp-inference-server.onrender.com");
+    ? "http://127.0.0.1:5889"
+    : "https://simcity-koto-inference-server.onrender.com");
 
 // Simulation component
 const Simulation = () => {
@@ -40,6 +42,9 @@ const Simulation = () => {
   // Movement index is determined by the number of observations (movements) in a turn
   const [currentMovementIndex, setCurrentMovementIndex] = useState(0);
   const [boardState, setBoardState] = useState(initialDummyBoard);
+
+  // Debug info visibility state
+  const [debugInfoExpanded, setDebugInfoExpanded] = useState(true);
 
   // Synchronize currentPlayer with currentMovementIndex (4 players: P1, P2, P3, P4)
   useEffect(() => {
@@ -164,10 +169,46 @@ const Simulation = () => {
       <div className="flex justify-center my-4">
         <table className="table-auto border-collapse border border-gray-400">
           <tbody>
+            {boardState.map((row, rowIndex) => (
+              <tr key={`row-${rowIndex}`}>
                 {row.map((cell, cellIndex) => {
-                  const IconComponent = buildingIcons[cell.type] || buildingIcons[-1];
+                  // Create flat icons with building symbols for buildable projects
+                  const getFlatIcon = (type) => {
+                    const iconMap = {
+                      // Terrain types (0-2) - Non-buildable, simple shapes
+                      0: <div className="w-4 h-4 border border-gray-400 bg-gray-50"></div>, // Empty
+                      1: <div className="w-6 h-3 bg-blue-600 rounded"></div>, // Water
+                      2: <div className="w-6 h-1 bg-gray-600"></div>, // Road
+                      
+                      // Basic Development Projects (100-103) - Buildable by players
+                      100: <div className="w-6 h-6 bg-blue-300 border border-blue-500 rounded flex items-center justify-center"><span className="text-xs font-bold text-blue-900">H</span></div>, // House
+                      101: <div className="w-6 h-6 bg-red-300 border border-red-500 rounded flex items-center justify-center"><span className="text-xs font-bold text-red-900">S</span></div>, // Shop
+                      102: <div className="w-6 h-6 bg-purple-300 border border-purple-500 rounded flex items-center justify-center"><span className="text-xs font-bold text-purple-900">O</span></div>, // Office
+                      103: <div className="w-6 h-6 bg-orange-400 border border-orange-600 rounded flex items-center justify-center"><span className="text-xs font-bold text-orange-900">F</span></div>, // Factory
+                      
+                      // Resilience Projects (201-204) - Buildable by players
+                      201: <div className="w-6 h-6 bg-green-400 border border-green-600 rounded flex items-center justify-center"><span className="text-xs font-bold text-green-900">P</span></div>, // Park
+                      202: <div className="w-6 h-6 bg-orange-300 border border-orange-500 rounded flex items-center justify-center"><span className="text-xs font-bold text-orange-900">C</span></div>, // Shelter
+                      203: <div className="w-6 h-6 bg-yellow-400 border border-yellow-600 rounded flex items-center justify-center"><span className="text-xs font-bold text-yellow-900">G</span></div>, // Watergate
+                      204: <div className="w-6 h-6 bg-purple-500 border border-purple-700 rounded flex items-center justify-center"><span className="text-xs font-bold text-purple-100">B</span></div>, // Flood Barrier
+                      
+                      // Legacy support for potential old building types
+                      3: <div className="w-6 h-6 bg-green-300 border border-green-500 rounded flex items-center justify-center"><span className="text-xs font-bold text-green-900">P</span></div>, // Old Park mapping
+                      4: <div className="w-6 h-6 bg-orange-300 border border-orange-500 rounded flex items-center justify-center"><span className="text-xs font-bold text-orange-900">C</span></div>, // Old Shelter mapping
+                      5: <div className="w-6 h-6 bg-yellow-400 border border-yellow-600 rounded flex items-center justify-center"><span className="text-xs font-bold text-yellow-900">G</span></div>, // Old Watergate mapping
+                      6: <div className="w-6 h-6 bg-purple-500 border border-purple-700 rounded flex items-center justify-center"><span className="text-xs font-bold text-purple-100">B</span></div>, // Old FloodBarrier mapping
+                      
+                      // Support for negative types
+                      [-1]: <div className="w-4 h-4 border border-gray-400 bg-gray-50"></div>, // Empty
+                      "-1": <div className="w-4 h-4 border border-gray-400 bg-gray-50"></div> // Empty
+                    };
+                    // For unknown building types, show the building type number instead of ?
+                    return iconMap[type] || <div className="w-6 h-6 bg-gray-400 border border-gray-600 rounded flex items-center justify-center"><span className="text-xs font-bold text-gray-100">{type}</span></div>;
+                  };
+                  
                   const iconColor = buildingIconColors[cell.type] || buildingIconColors[-1];
                   const bgClass = buildingColorMap[cell.type] || "bg-gray-100";
+                  
                   return (
                     <td
                       key={`cell-${rowIndex}-${cellIndex}`}
@@ -175,13 +216,14 @@ const Simulation = () => {
                       onClick={() => console.log(`Cell clicked at [${rowIndex},${cellIndex}]`)}
                     >
                       <div className="flex flex-col items-center justify-center h-full relative">
-                        <IconComponent 
-                          size={32} 
-                          color={iconColor}
-                          className="mb-1"
-                        />
+                        
+                        {/* Display flat CSS icon */}
+                        <div className="mb-1">
+                          {getFlatIcon(cell.type)}
+                        </div>
+                        
                         {cell.owner && cell.owner !== "TERRAIN" && cell.owner !== "INFRA" && (
-                          <span className="text-xs text-gray-600 font-bold absolute bottom-0">
+                          <span className="text-xs text-gray-700 font-bold absolute bottom-0 bg-white bg-opacity-75 px-1 rounded">
                             {cell.owner}
                           </span>
                         )}
@@ -210,294 +252,235 @@ const Simulation = () => {
 
 
   return (
-    <div className="max-w-4xl mx-auto p-6 bg-white shadow-md rounded-md">
-
+    <div className="min-h-screen bg-gray-50 p-6">
+      {/* Error Display */}
       {error && (
-        <div className="mb-4 p-4 text-red-700 bg-red-100 rounded-md">
+        <div className="mb-4 p-4 text-red-700 bg-red-100 rounded-md max-w-full">
           <p>{error}</p>
         </div>
       )}
 
-      <div className="mb-6">
-        <h2 className="text-xl font-semibold">Current Player</h2>
-        <p className="p-4 bg-blue-100 rounded-md">
-          <strong>{currentPlayer}</strong>: {players[currentPlayer].role}
-        </p>
-      </div>
-
-      {/* Player Information */}
-      <div className="mb-6">
-        <h2 className="text-xl font-semibold">Player Information</h2>
-        <div className="grid grid-cols-3 gap-4">
-          {Object.entries(players).map(([player, info]) => {
-            // Use current turn data if available
-            const turnData =
-              simulationEpisode && simulationEpisode[currentTurnIndex]
-                ? simulationEpisode[currentTurnIndex]
-                : null;
-            const dynamicResources =
-              turnData &&
-                turnData.info &&
-                turnData.info.player_resources &&
-                turnData.info.player_resources[player]
-                ? turnData.info.player_resources[player]
-                : info.resources;
-
-            // Compatible with different key names (backend uses lowercase)
-            const money = dynamicResources.money || dynamicResources.Money;
-            const reputation = dynamicResources.reputation || dynamicResources.Reputation;
-
-            return (
-              <div
-                key={player}
-                className={`p-4 rounded-md ${player === "P1" ? "bg-green-100" : "bg-gray-100"}`}
-              >
-                <p>
-                  <strong>{player}</strong>: {info.role}
-                </p>
-                <p>Money: {money}</p>
-                <p>Reputation: {reputation}</p>
-                {player === "P1" && <p>(Human)</p>}
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Render the board */}
-      <div className="mb-6">
-        <h2 className="text-xl font-semibold mb-2 text-center">Game Board</h2>
-        {renderBoard()}
+      {/* Main Layout: Left (Game Board) and Right (Controls & Info) */}
+      <div className="flex gap-6 max-w-full">
         
-        {/* Icon Legend */}
-        <div className="mt-4 p-4 bg-gray-50 rounded-md">
-          <h3 className="text-lg font-semibold mb-2 text-center">Icon Legend</h3>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2 text-sm">
-            {/* Buildings */}
-            <div className="bg-white p-2 rounded border">
-              <div className="text-center">
-                {(() => {
-                  const IconComponent = buildingIconComponents[0];
-                  return <IconComponent size={32} style={iconStyles[0]} />;
-                })()}
-                <p className="text-xs mt-1">Green Park</p>
-              </div>
-            </div>
-            <div className="bg-white p-2 rounded border">
-              <div className="text-center">
-                {(() => {
-                  const IconComponent = buildingIconComponents[1];
-                  return <IconComponent size={32} style={iconStyles[1]} />;
-                })()}
-                <p className="text-xs mt-1">Resilient House</p>
-              </div>
-            </div>
-            <div className="bg-white p-2 rounded border">
-              <div className="text-center">
-                {(() => {
-                  const IconComponent = buildingIconComponents[2];
-                  return <IconComponent size={32} style={iconStyles[2]} />;
-                })()}
-                <p className="text-xs mt-1">Community Hub</p>
-              </div>
-            </div>
-            <div className="bg-white p-2 rounded border">
-              <div className="text-center">
-                {(() => {
-                  const IconComponent = buildingIconComponents[3];
-                  return <IconComponent size={32} style={iconStyles[3]} />;
-                })()}
-                <p className="text-xs mt-1">Solar Grid</p>
-              </div>
-            </div>
-            <div className="bg-white p-2 rounded border">
-              <div className="text-center">
-                {(() => {
-                  const IconComponent = buildingIconComponents[4];
-                  return <IconComponent size={32} style={iconStyles[4]} />;
-                })()}
-                <p className="text-xs mt-1">Flood Barrier</p>
-              </div>
-            </div>
-            
-            {/* Terrain */}
-            <div className="bg-white p-2 rounded border">
-              <div className="text-center">
-                {(() => {
-                  const IconComponent = buildingIconComponents["River"];
-                  return <IconComponent size={32} style={iconStyles["River"]} />;
-                })()}
-                <p className="text-xs mt-1">River</p>
-              </div>
-            </div>
-            <div className="bg-white p-2 rounded border">
-              <div className="text-center">
-                {(() => {
-                  const IconComponent = buildingIconComponents["Mountain"];
-                  return <IconComponent size={32} style={iconStyles["Mountain"]} />;
-                })()}
-                <p className="text-xs mt-1">Mountain</p>
-              </div>
-            </div>
-            <div className="bg-white p-2 rounded border">
-              <div className="text-center">
-                {(() => {
-                  const IconComponent = buildingIconComponents["Lake"];
-                  return <IconComponent size={32} style={iconStyles["Lake"]} />;
-                })()}
-                <p className="text-xs mt-1">Lake</p>
-              </div>
-            </div>
-            <div className="bg-white p-2 rounded border">
-              <div className="text-center">
-                {(() => {
-                  const IconComponent = buildingIconComponents["Highway"];
-                  return <IconComponent size={32} style={iconStyles["Highway"]} />;
-                })()}
-                <p className="text-xs mt-1">Highway</p>
-              </div>
-            </div>
-            <div className="bg-white p-2 rounded border">
-              <div className="text-center">
-                {(() => {
-                  const IconComponent = buildingIconComponents["Railway"];
-                  return <IconComponent size={32} style={iconStyles["Railway"]} />;
-                })()}
-                <p className="text-xs mt-1">Railway</p>
-              </div>
-            </div>
-            
-            {/* Infrastructure */}
-            <div className="bg-white p-2 rounded border">
-              <div className="text-center">
-                {(() => {
-                  const IconComponent = buildingIconComponents["Hospital"];
-                  return <IconComponent size={32} style={iconStyles["Hospital"]} />;
-                })()}
-                <p className="text-xs mt-1">Hospital</p>
-              </div>
-            </div>
-            <div className="bg-white p-2 rounded border">
-              <div className="text-center">
-                {(() => {
-                  const IconComponent = buildingIconComponents["School"];
-                  return <IconComponent size={32} style={iconStyles["School"]} />;
-                })()}
-                <p className="text-xs mt-1">School</p>
-              </div>
-            </div>
-            <div className="bg-white p-2 rounded border">
-              <div className="text-center">
-                {(() => {
-                  const IconComponent = buildingIconComponents["FireStation"];
-                  return <IconComponent size={32} style={iconStyles["FireStation"]} />;
-                })()}
-                <p className="text-xs mt-1">Fire Station</p>
-              </div>
-            </div>
-            <div className="bg-white p-2 rounded border">
-              <div className="text-center">
-                {(() => {
-                  const IconComponent = buildingIconComponents["PowerPlant"];
-                  return <IconComponent size={32} style={iconStyles["PowerPlant"]} />;
-                })()}
-                <p className="text-xs mt-1">Power Plant</p>
-              </div>
-            </div>
-            <div className="bg-white p-2 rounded border">
-              <div className="text-center">
-                {(() => {
-                  const IconComponent = buildingIconComponents["-1"];
-                  return <IconComponent size={32} style={iconStyles["-1"]} />;
-                })()}
-                <p className="text-xs mt-1">Empty</p>
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        <button
-          onClick={() => setShowBuilders(!showBuilders)}
-          className="px-4 py-2 text-white bg-blue-500 rounded-md hover:bg-blue-600 mt-4"
-        >
-          {showBuilders ? "Hide Builders" : "Show Builders"}
-        </button>
-      </div>
-
-      {/* Simulation Controls */}
-      <div className="mb-6 p-4 border rounded-md bg-gray-50">
-        <h2 className="text-xl font-semibold mb-2 text-center">Simulation</h2>
-        <div className="flex justify-center gap-4 mb-4">
+        {/* LEFT SIDE: Game Board */}
+        <div className="flex-1 bg-white shadow-md rounded-md p-6">
+          <h2 className="text-2xl font-semibold mb-4 text-center">Game Board</h2>
+          {renderBoard()}
+          
           <button
-            onClick={fetchSimulationEpisode}
-            className="px-4 py-2 text-white bg-green-500 rounded-md hover:bg-green-600"
+            onClick={() => setShowBuilders(!showBuilders)}
+            className="px-4 py-2 text-white bg-blue-500 rounded-md hover:bg-blue-600 mt-4"
           >
-            Simulate Episode
+            {showBuilders ? "Hide Builders" : "Show Builders"}
           </button>
-          {simulationEpisode && (
-            <>
-              <button
-                onClick={previousTurn}
-                className="px-4 py-2 text-white bg-purple-500 rounded-md hover:bg-purple-600"
-                disabled={currentTurnIndex === 0}
-              >
-                Previous Turn
-              </button>
-              <button
-                onClick={nextTurn}
-                className="px-4 py-2 text-white bg-blue-500 rounded-md hover:bg-blue-600"
-                disabled={simulationEpisode && currentTurnIndex === simulationEpisode.length - 1}
-              >
-                Next Turn
-              </button>
-            </>
-          )}
         </div>
-        {/* Movement Controls */}
-        {/* {simulationEpisode && (
-          <div className="flex justify-center gap-4 mb-4">
-            <button
-              onClick={previousMovement}
-              className="px-4 py-2 text-white bg-purple-500 rounded-md hover:bg-purple-600"
-              disabled={currentMovementIndex === 0}
-            >
-              Previous Movement
-            </button>
-            <button
-              onClick={nextMovement}
-              className="px-4 py-2 text-white bg-blue-500 rounded-md hover:bg-blue-600"
-              disabled={
-                (() => {
-                  const turnObs = simulationEpisode[currentTurnIndex].observation;
-                  const movements = Array.isArray(turnObs[0]) ? turnObs[0] : turnObs;
-                  return movements.length <= currentMovementIndex + 1;
-                })()
-              }
-            >
-              Next Movement
-            </button>
-          </div>
-        )} */}
-        {simulationEpisode && (
-          <div className="text-center">
-            {(() => {
-              const turnObs = simulationEpisode[currentTurnIndex].observation;
-              const movements = Array.isArray(turnObs[0]) ? turnObs[0] : turnObs;
-              return (
-                <div>
-                  <p>
-                    Turn {currentTurnIndex + 1} of {simulationEpisode.length}
-                  </p>
-                  {/* <p>Movement: P
-                  {currentMovementIndex + 1} of {movements.length}</p> */}
-                </div>
-              );
-            })()}
-            {renderSimulationTurn()}
-          </div>
-        )}
-      </div>
 
+        {/* RIGHT SIDE: Controls & Information */}
+        <div className="w-96 space-y-6">
+          
+          {/* Current Player */}
+          {/* <div className="bg-white shadow-md rounded-md p-4">
+            <h3 className="text-lg font-semibold mb-2">Current Player</h3>
+            <div className="p-3 bg-blue-100 rounded-md">
+              <p><strong>{currentPlayer}</strong>: {players[currentPlayer].role}</p>
+            </div>
+          </div> */}
+
+          {/* Player Information */}
+          <div className="bg-white shadow-md rounded-md p-4">
+            <h3 className="text-lg font-semibold mb-3">Player Information</h3>
+            <div className="space-y-2">
+              {Object.entries(players).map(([player, info]) => {
+                // Use current turn data if available
+                const turnData =
+                  simulationEpisode && simulationEpisode[currentTurnIndex]
+                    ? simulationEpisode[currentTurnIndex]
+                    : null;
+                const dynamicResources =
+                  turnData &&
+                    turnData.info &&
+                    turnData.info.player_resources &&
+                    turnData.info.player_resources[player]
+                    ? turnData.info.player_resources[player]
+                    : info.resources;
+
+                // Compatible with different key names (backend uses lowercase)
+                const money = dynamicResources.money || dynamicResources.Money;
+                const reputation = dynamicResources.reputation || dynamicResources.Reputation;
+
+                return (
+                  <div
+                    key={player}
+                    className={`p-3 rounded-md text-sm ${player === "P1" ? "bg-green-100" : "bg-gray-100"}`}
+                  >
+                    <p><strong>{player}</strong>: {info.role}</p>
+                    <p>Money: {money} | Reputation: {reputation}</p>
+                    {player === "P1" && <p className="text-green-600 font-semibold">(Human)</p>}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Urban Resilience Parameters */}
+          {(() => {
+            if (simulationEpisode && simulationEpisode[currentTurnIndex]) {
+              const turnData = simulationEpisode[currentTurnIndex];
+              const agentObservations = turnData.observation[0][0];
+              if (Array.isArray(agentObservations) && agentObservations.length > 0) {
+                const parameters = parseKotoParameters(agentObservations[0]);
+                return renderParameterDisplay(parameters);
+              }
+            }
+            return null;
+          })()}
+
+          {/* Simulation Controls */}
+          <div className="bg-white shadow-md rounded-md p-4">
+            <h3 className="text-lg font-semibold mb-3">Simulation Controls</h3>
+            <div className="space-y-3">
+              <button
+                onClick={fetchSimulationEpisode}
+                className="w-full px-4 py-2 text-white bg-green-500 rounded-md hover:bg-green-600"
+              >
+                Simulate Episode
+              </button>
+              
+              {simulationEpisode && (
+                <>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={previousTurn}
+                      className="flex-1 px-3 py-2 text-white bg-purple-500 rounded-md hover:bg-purple-600 disabled:bg-gray-300"
+                      disabled={currentTurnIndex === 0}
+                    >
+                      Previous Turn
+                    </button>
+                    <button
+                      onClick={nextTurn}
+                      className="flex-1 px-3 py-2 text-white bg-blue-500 rounded-md hover:bg-blue-600 disabled:bg-gray-300"
+                      disabled={simulationEpisode && currentTurnIndex === simulationEpisode.length - 1}
+                    >
+                      Next Turn
+                    </button>
+                  </div>
+                  
+                  <div className="text-center text-sm text-gray-600">
+                    Turn {currentTurnIndex + 1} of {simulationEpisode.length}
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* Player Buildable Projects */}
+          <div className="bg-white shadow-md rounded-md p-4">
+            <h3 className="text-lg font-semibold mb-3">Player Buildable Projects</h3>
+            
+            {/* Basic Development Projects */}
+            <div className="mb-4">
+              <h4 className="text-sm font-semibold text-gray-700 mb-2">Basic Development</h4>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="bg-blue-50 p-2 rounded border text-center">
+                  <div className="w-6 h-6 bg-blue-300 border border-blue-500 rounded flex items-center justify-center mx-auto mb-1">
+                    <span className="text-xs font-bold text-blue-900">H</span>
+                  </div>
+                  <p className="text-xs">House</p>
+                </div>
+                <div className="bg-red-50 p-2 rounded border text-center">
+                  <div className="w-6 h-6 bg-red-300 border border-red-500 rounded flex items-center justify-center mx-auto mb-1">
+                    <span className="text-xs font-bold text-red-900">S</span>
+                  </div>
+                  <p className="text-xs">Shop</p>
+                </div>
+                <div className="bg-purple-50 p-2 rounded border text-center">
+                  <div className="w-6 h-6 bg-purple-300 border border-purple-500 rounded flex items-center justify-center mx-auto mb-1">
+                    <span className="text-xs font-bold text-purple-900">O</span>
+                  </div>
+                  <p className="text-xs">Office</p>
+                </div>
+                <div className="bg-orange-50 p-2 rounded border text-center">
+                  <div className="w-6 h-6 bg-orange-400 border border-orange-600 rounded flex items-center justify-center mx-auto mb-1">
+                    <span className="text-xs font-bold text-orange-900">F</span>
+                  </div>
+                  <p className="text-xs">Factory</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Resilience Projects */}
+            <div className="mb-4">
+              <h4 className="text-sm font-semibold text-gray-700 mb-2">Resilience Projects</h4>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="bg-green-50 p-2 rounded border text-center">
+                  <div className="w-6 h-6 bg-green-400 border border-green-600 rounded flex items-center justify-center mx-auto mb-1">
+                    <span className="text-xs font-bold text-green-900">P</span>
+                  </div>
+                  <p className="text-xs">Park</p>
+                </div>
+                <div className="bg-orange-50 p-2 rounded border text-center">
+                  <div className="w-6 h-6 bg-orange-300 border border-orange-500 rounded flex items-center justify-center mx-auto mb-1">
+                    <span className="text-xs font-bold text-orange-900">C</span>
+                  </div>
+                  <p className="text-xs">Shelter</p>
+                </div>
+                <div className="bg-yellow-50 p-2 rounded border text-center">
+                  <div className="w-6 h-6 bg-yellow-400 border border-yellow-600 rounded flex items-center justify-center mx-auto mb-1">
+                    <span className="text-xs font-bold text-yellow-900">G</span>
+                  </div>
+                  <p className="text-xs">Watergate</p>
+                </div>
+                <div className="bg-purple-50 p-2 rounded border text-center">
+                  <div className="w-6 h-6 bg-purple-500 border border-purple-700 rounded flex items-center justify-center mx-auto mb-1">
+                    <span className="text-xs font-bold text-purple-100">B</span>
+                  </div>
+                  <p className="text-xs">Flood Barrier</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Terrain (Non-buildable) */}
+            <div>
+              <h4 className="text-sm font-semibold text-gray-700 mb-2">Terrain (Fixed)</h4>
+              <div className="grid grid-cols-3 gap-2">
+                <div className="bg-gray-50 p-2 rounded border text-center">
+                  <div className="w-4 h-4 border border-gray-400 bg-gray-50 mx-auto mb-1"></div>
+                  <p className="text-xs">Empty</p>
+                </div>
+                <div className="bg-blue-50 p-2 rounded border text-center">
+                  <div className="w-6 h-3 bg-blue-600 rounded mx-auto mb-1"></div>
+                  <p className="text-xs">Water</p>
+                </div>
+                <div className="bg-gray-50 p-2 rounded border text-center">
+                  <div className="w-6 h-1 bg-gray-600 mx-auto mb-1 mt-2"></div>
+                  <p className="text-xs">Road</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Collapsible Debug Info */}
+          <div className="bg-white shadow-md rounded-md p-4">
+            <button
+              onClick={() => setDebugInfoExpanded(!debugInfoExpanded)}
+              className="flex items-center justify-between w-full text-left"
+            >
+              <h3 className="text-lg font-semibold">Debug Information</h3>
+              <span className="text-gray-500">
+                {debugInfoExpanded ? '▼' : '▶'}
+              </span>
+            </button>
+            
+            {debugInfoExpanded && simulationEpisode && (
+              <div className="mt-3 text-sm">
+                {renderSimulationTurn()}
+              </div>
+            )}
+          </div>
+
+        </div>
+      </div>
     </div>
   );
 };
