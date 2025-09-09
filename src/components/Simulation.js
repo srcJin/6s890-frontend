@@ -212,7 +212,7 @@ const Simulation = () => {
                           {getFlatIcon(cell.type)}
                         </div>
                         
-                        {cell.owner && cell.owner !== "TERRAIN" && cell.owner !== "INFRA" && (
+                        {cell.owner && cell.type !== 0 && cell.type !== -1 && cell.owner !== "TERRAIN" && cell.owner !== "INFRA" && (
                           <span className="text-xs text-gray-700 font-bold absolute bottom-0 bg-white bg-opacity-75 px-1 rounded">
                             {cell.owner}
                           </span>
