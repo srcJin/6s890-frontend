@@ -354,7 +354,6 @@ const Simulation = () => {
         )}
       </div>
 
-
     </div>
   );
 };
