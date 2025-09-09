@@ -22,7 +22,7 @@ import {
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL ||
   (process.env.NODE_ENV === "development"
-    ? "http://127.0.0.1:5889"
+  ? "http://127.0.0.1:5888"
     : "https://simcity-koto-inference-server.onrender.com");
 
 // Simulation component
@@ -69,9 +69,9 @@ const Simulation = () => {
       if (data.episode_records && data.episode_records.length > 0) {
         // Log the observation structure for debugging
         console.log("Observation for first turn:", data.episode_records[0].observation);
-        // Extract first agent's observation: observation[0][0][0] (first agent's 514-value array)
-        const firstObs = data.episode_records[0].observation[0][0][0];
-        setBoardState(parseObservationForBoard(firstObs));
+        // Extract first agent's flat vector (shape: [1][n_agents][obs_size] wrapped once)
+        const firstAgentObs = data.episode_records[0].observation[0][0][0];
+        setBoardState(parseObservationForBoard(firstAgentObs));
       }
     } catch (error) {
       console.error("Error fetching simulation episode:", error);
@@ -84,7 +84,7 @@ const Simulation = () => {
       const newTurnIndex = currentTurnIndex + 1;
       setCurrentTurnIndex(newTurnIndex);
       setCurrentMovementIndex(0);
-      const newObs = simulationEpisode[newTurnIndex].observation[0][0][0]; // First agent's observation
+  const newObs = simulationEpisode[newTurnIndex].observation[0][0][0]; // First agent's observation vector
       console.log("Switching to turn", newTurnIndex, "observation:", simulationEpisode[newTurnIndex].observation);
       setBoardState(parseObservationForBoard(newObs));
     }
@@ -96,7 +96,7 @@ const Simulation = () => {
       const newTurnIndex = currentTurnIndex - 1;
       setCurrentTurnIndex(newTurnIndex);
       setCurrentMovementIndex(0);
-      const newObs = simulationEpisode[newTurnIndex].observation[0][0][0]; // First agent's observation
+  const newObs = simulationEpisode[newTurnIndex].observation[0][0][0]; // First agent's observation vector
       console.log("Switching to previous turn", newTurnIndex, "observation:", simulationEpisode[newTurnIndex].observation);
       setBoardState(parseObservationForBoard(newObs));
     }
@@ -111,10 +111,10 @@ const Simulation = () => {
       console.log("Current movement index:", currentMovementIndex);
       // For simulation, we use the first agent's observation consistently
       // observation[0][0] contains the 4 agents, we use index 0 for the first agent
-      const agentObservations = currentTurn.observation[0][0];
-      if (Array.isArray(agentObservations) && agentObservations.length > 0) {
+      const agentsArr = currentTurn.observation[0][0];
+      if (Array.isArray(agentsArr) && agentsArr.length > 0) {
         // Always use the first agent's observation for board visualization
-        const newObs = agentObservations[0]; // First agent's 514-value observation
+        const newObs = agentsArr[0]; // First agent's flat observation vector
         console.log("Using first agent observation for board display");
         setBoardState(parseObservationForBoard(newObs));
       }
@@ -128,10 +128,10 @@ const Simulation = () => {
       setCurrentMovementIndex(newMovementIndex);
       const currentTurn = simulationEpisode[currentTurnIndex];
       // For simulation, we use the first agent's observation consistently
-      const agentObservations = currentTurn.observation[0][0];
-      if (Array.isArray(agentObservations) && agentObservations.length > 0) {
+      const agentsArr = currentTurn.observation[0][0];
+      if (Array.isArray(agentsArr) && agentsArr.length > 0) {
         // Always use the first agent's observation for board visualization
-        const newObs = agentObservations[0]; // First agent's 514-value observation
+        const newObs = agentsArr[0]; // First agent's flat observation vector
         console.log("Using first agent observation for board display");
         setBoardState(parseObservationForBoard(newObs));
       }
@@ -144,9 +144,9 @@ const Simulation = () => {
       return <div>No simulation data. Click Simulate Episode to fetch data.</div>;
     } 
     const turnData = simulationEpisode[currentTurnIndex];
-    // For the scaled-up environment, we have 4 agents in the observation
-    // observation[0][0] contains array of 4 agents
-    const agentObservations = turnData.observation[0][0];
+  // For the scaled-up environment, we have 4 agents in the observation
+  // observation[0][0] contains array of 4 agents
+  const agentObservations = turnData.observation[0][0];
     const numMovements = Array.isArray(agentObservations) ? agentObservations.length : 1;
     console.log("Rendering turn", turnData.t_env, "with observation structure:", turnData.observation);
     return (
@@ -317,7 +317,7 @@ const Simulation = () => {
           {(() => {
             if (simulationEpisode && simulationEpisode[currentTurnIndex]) {
               const turnData = simulationEpisode[currentTurnIndex];
-              const agentObservations = turnData.observation[0][0];
+              const agentObservations = turnData.observation[0];
               if (Array.isArray(agentObservations) && agentObservations.length > 0) {
                 const parameters = parseKotoParameters(agentObservations[0]);
                 return renderParameterDisplay(parameters);

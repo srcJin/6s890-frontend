@@ -68,7 +68,7 @@ export const buildingNames = {
   // Resilience projects
   201: "Park",
   202: "Shelter",
-  203: "Watergate", 
+  203: "Solar Grid", 
   204: "Flood Barrier",
   
   // Legacy support
@@ -209,24 +209,70 @@ export const parseObservationForBoard = (observation) => {
       const gridLayoutEnd = gridLayoutStart + gridSize; 
       
       const buildersFlat = observation.slice(buildersStart, buildersEnd);
-      const buildingTypesFlat = observation.slice(buildingTypesStart, buildingTypesEnd);
-      const gridLayoutFlat = observation.slice(gridLayoutStart, gridLayoutEnd);
+      // Map backend building_types indices (0..5) to our frontend icon/type IDs
+      const mapBackendTypeToFrontend = (v) => {
+        if (typeof v !== 'number') return v;
+        if (v === -1) return -1; // no building
+        // Backend indices: 0=House,1=Shop,2=GreenPark,3=CommunityHub,4=SolarGrid,5=FloodBarrier
+        const mapping = { 0: 100, 1: 101, 2: 201, 3: 202, 4: 203, 5: 204 };
+        return mapping.hasOwnProperty(v) ? mapping[v] : v;
+      };
+      const buildingTypesFlatRaw = observation.slice(buildingTypesStart, buildingTypesEnd);
+      const buildingTypesFlat = buildingTypesFlatRaw.map(mapBackendTypeToFrontend);
+  const gridLayoutFlat = observation.slice(gridLayoutStart, gridLayoutEnd);
       
       console.log("Koto - Builders data:", buildersFlat.slice(0, 10), "...");
       console.log("Koto - Building types data:", buildingTypesFlat.slice(0, 10), "...");
       console.log("Koto - Grid layout data:", gridLayoutFlat.filter(x => x !== 0).slice(0, 10), "...");
       
+      // Known IDs for validation (from buildingNames keys)
+      const knownIds = Object.keys(buildingNames)
+        .map((k) => parseInt(k, 10))
+        .filter((n) => !Number.isNaN(n));
+
+      const isKnownId = (v) => knownIds.includes(Number(v));
+
+      const sanitizeProjectId = (v) => {
+        if (typeof v !== 'number') return v;
+        if (v === -1 || v === 0) return v;
+        if (isKnownId(v)) return v;
+        // Unknowns: treat as empty
+        console.warn(`Unknown project id ${v} -> treating as empty (-1)`);
+        return -1;
+      };
+
+      const sanitizeBuilderVal = (v) => {
+        if (typeof v !== 'number') return v;
+        if (v === -1) return -1;
+        if (v >= 0 && Number.isFinite(v)) return v; // valid builder index
+        if (v < -1) {
+          const cand = Math.sign(v) * Math.floor(Math.abs(v) / 10);
+          if (cand === -1) {
+            console.warn(`Sanitized builder val ${v} -> -1`);
+            return -1;
+          }
+        }
+        // fallback to -1 (empty)
+        console.warn(`Normalized unexpected builder val ${v} -> -1`);
+        return -1;
+      };
+
       const board = [];
       for (let i = 0; i < 12; i++) {
         const row = [];
         for (let j = 0; j < 12; j++) {
-          const builderVal = buildersFlat[i * 12 + j];
-          const bType = buildingTypesFlat[i * 12 + j];
-          const gridVal = gridLayoutFlat[i * 12 + j];
+          let builderVal = buildersFlat[i * 12 + j];
+          let bType = buildingTypesFlat[i * 12 + j];
+          let gridVal = gridLayoutFlat[i * 12 + j];
+
+          // sanitize incoming numeric values that don't match expected ID ranges
+          builderVal = sanitizeBuilderVal(builderVal);
+          bType = sanitizeProjectId(bType);
+          // Grid layout comes from terrain layout; clamp to 0/1/2 only
+          gridVal = (gridVal === 1 || gridVal === 2) ? gridVal : 0;
           
-          // In koto, the grid layout determines the cell type (unified TERRAIN_AND_PROJECTS)
-          // Use grid layout value as the primary type, fall back to building type
-          let cellType = gridVal || bType || 0; // Default to Empty (0)
+          // Prefer terrain from grid layout (1=Water, 2=Road); if 0 (buildable), use project type
+          let cellType = (gridVal || bType || 0);
           let cellOwner = builderVal === -1 ? null : `P${builderVal + 1}`;
           
           // Set special owners for terrain types
