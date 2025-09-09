@@ -172,38 +172,29 @@ const Simulation = () => {
             {boardState.map((row, rowIndex) => (
               <tr key={`row-${rowIndex}`}>
                 {row.map((cell, cellIndex) => {
-                  // Create flat icons with building symbols for buildable projects
+                  // Flat vector icon for each cell type (no text letters)
                   const getFlatIcon = (type) => {
-                    const iconMap = {
-                      // Terrain types (0-2) - Non-buildable, simple shapes
-                      0: <div className="w-4 h-4 border border-gray-400 bg-gray-50"></div>, // Empty
-                      1: <div className="w-6 h-3 bg-blue-600 rounded"></div>, // Water
-                      2: <div className="w-6 h-1 bg-gray-600"></div>, // Road
-                      
-                      // Basic Development Projects (100-103) - Buildable by players
-                      100: <div className="w-6 h-6 bg-blue-300 border border-blue-500 rounded flex items-center justify-center"><span className="text-xs font-bold text-blue-900">H</span></div>, // House
-                      101: <div className="w-6 h-6 bg-red-300 border border-red-500 rounded flex items-center justify-center"><span className="text-xs font-bold text-red-900">S</span></div>, // Shop
-                      102: <div className="w-6 h-6 bg-purple-300 border border-purple-500 rounded flex items-center justify-center"><span className="text-xs font-bold text-purple-900">O</span></div>, // Office
-                      103: <div className="w-6 h-6 bg-orange-400 border border-orange-600 rounded flex items-center justify-center"><span className="text-xs font-bold text-orange-900">F</span></div>, // Factory
-                      
-                      // Resilience Projects (201-204) - Buildable by players
-                      201: <div className="w-6 h-6 bg-green-400 border border-green-600 rounded flex items-center justify-center"><span className="text-xs font-bold text-green-900">P</span></div>, // Park
-                      202: <div className="w-6 h-6 bg-orange-300 border border-orange-500 rounded flex items-center justify-center"><span className="text-xs font-bold text-orange-900">C</span></div>, // Shelter
-                      203: <div className="w-6 h-6 bg-yellow-400 border border-yellow-600 rounded flex items-center justify-center"><span className="text-xs font-bold text-yellow-900">G</span></div>, // Watergate
-                      204: <div className="w-6 h-6 bg-purple-500 border border-purple-700 rounded flex items-center justify-center"><span className="text-xs font-bold text-purple-100">B</span></div>, // Flood Barrier
-                      
-                      // Legacy support for potential old building types
-                      3: <div className="w-6 h-6 bg-green-300 border border-green-500 rounded flex items-center justify-center"><span className="text-xs font-bold text-green-900">P</span></div>, // Old Park mapping
-                      4: <div className="w-6 h-6 bg-orange-300 border border-orange-500 rounded flex items-center justify-center"><span className="text-xs font-bold text-orange-900">C</span></div>, // Old Shelter mapping
-                      5: <div className="w-6 h-6 bg-yellow-400 border border-yellow-600 rounded flex items-center justify-center"><span className="text-xs font-bold text-yellow-900">G</span></div>, // Old Watergate mapping
-                      6: <div className="w-6 h-6 bg-purple-500 border border-purple-700 rounded flex items-center justify-center"><span className="text-xs font-bold text-purple-100">B</span></div>, // Old FloodBarrier mapping
-                      
-                      // Support for negative types
-                      [-1]: <div className="w-4 h-4 border border-gray-400 bg-gray-50"></div>, // Empty
-                      "-1": <div className="w-4 h-4 border border-gray-400 bg-gray-50"></div> // Empty
-                    };
-                    // For unknown building types, show the building type number instead of ?
-                    return iconMap[type] || <div className="w-6 h-6 bg-gray-400 border border-gray-600 rounded flex items-center justify-center"><span className="text-xs font-bold text-gray-100">{type}</span></div>;
+                    // Terrain visuals
+                    if (type === 0 || type === -1) {
+                      return <div className="w-4 h-4 border border-gray-400 bg-gray-50 rounded-sm" />;
+                    }
+                    if (type === 1) {
+                      const Icon = buildingIcons[1];
+                      return <Icon size={18} color={buildingIconColors[1]} />;
+                    }
+                    if (type === 2) {
+                      const Icon = buildingIcons[2];
+                      return <Icon size={18} color={buildingIconColors[2]} />;
+                    }
+
+                    const IconComponent = buildingIcons[type];
+                    const iconColor = buildingIconColors[type] || "#374151";
+                    if (IconComponent) {
+                      return <IconComponent size={20} color={iconColor} />;
+                    }
+
+                    // Fallback neutral block for unknown types (no text)
+                    return <div className="w-5 h-5 bg-gray-400/70 border border-gray-600 rounded" title={`Type ${type}`} />;
                   };
                   
                   const iconColor = buildingIconColors[cell.type] || buildingIconColors[-1];
@@ -216,9 +207,8 @@ const Simulation = () => {
                       onClick={() => console.log(`Cell clicked at [${rowIndex},${cellIndex}]`)}
                     >
                       <div className="flex flex-col items-center justify-center h-full relative">
-                        
-                        {/* Display flat CSS icon */}
-                        <div className="mb-1">
+                        {/* Display flat icon */}
+                        <div className="mb-1 flex items-center justify-center">
                           {getFlatIcon(cell.type)}
                         </div>
                         
@@ -382,30 +372,19 @@ const Simulation = () => {
             <div className="mb-4">
               <h4 className="text-sm font-semibold text-gray-700 mb-2">Basic Development</h4>
               <div className="grid grid-cols-2 gap-2">
-                <div className="bg-blue-50 p-2 rounded border text-center">
-                  <div className="w-6 h-6 bg-blue-300 border border-blue-500 rounded flex items-center justify-center mx-auto mb-1">
-                    <span className="text-xs font-bold text-blue-900">H</span>
-                  </div>
-                  <p className="text-xs">House</p>
-                </div>
-                <div className="bg-red-50 p-2 rounded border text-center">
-                  <div className="w-6 h-6 bg-red-300 border border-red-500 rounded flex items-center justify-center mx-auto mb-1">
-                    <span className="text-xs font-bold text-red-900">S</span>
-                  </div>
-                  <p className="text-xs">Shop</p>
-                </div>
-                <div className="bg-purple-50 p-2 rounded border text-center">
-                  <div className="w-6 h-6 bg-purple-300 border border-purple-500 rounded flex items-center justify-center mx-auto mb-1">
-                    <span className="text-xs font-bold text-purple-900">O</span>
-                  </div>
-                  <p className="text-xs">Office</p>
-                </div>
-                <div className="bg-orange-50 p-2 rounded border text-center">
-                  <div className="w-6 h-6 bg-orange-400 border border-orange-600 rounded flex items-center justify-center mx-auto mb-1">
-                    <span className="text-xs font-bold text-orange-900">F</span>
-                  </div>
-                  <p className="text-xs">Factory</p>
-                </div>
+                {[100,101,102,103].map((t) => {
+                  const Icon = buildingIcons[t];
+                  const iconColor = buildingIconColors[t];
+                  const bg = t === 100 ? "bg-blue-50" : t === 101 ? "bg-red-50" : t === 102 ? "bg-purple-50" : "bg-orange-50";
+                  return (
+                    <div key={t} className={`${bg} p-2 rounded border text-center`}>
+                      <div className="w-8 h-8 rounded flex items-center justify-center mx-auto mb-1">
+                        <Icon size={20} color={iconColor} />
+                      </div>
+                      <p className="text-xs">{buildingNames[t]}</p>
+                    </div>
+                  );
+                })}
               </div>
             </div>
 
@@ -413,30 +392,19 @@ const Simulation = () => {
             <div className="mb-4">
               <h4 className="text-sm font-semibold text-gray-700 mb-2">Resilience Projects</h4>
               <div className="grid grid-cols-2 gap-2">
-                <div className="bg-green-50 p-2 rounded border text-center">
-                  <div className="w-6 h-6 bg-green-400 border border-green-600 rounded flex items-center justify-center mx-auto mb-1">
-                    <span className="text-xs font-bold text-green-900">P</span>
-                  </div>
-                  <p className="text-xs">Park</p>
-                </div>
-                <div className="bg-orange-50 p-2 rounded border text-center">
-                  <div className="w-6 h-6 bg-orange-300 border border-orange-500 rounded flex items-center justify-center mx-auto mb-1">
-                    <span className="text-xs font-bold text-orange-900">C</span>
-                  </div>
-                  <p className="text-xs">Shelter</p>
-                </div>
-                <div className="bg-yellow-50 p-2 rounded border text-center">
-                  <div className="w-6 h-6 bg-yellow-400 border border-yellow-600 rounded flex items-center justify-center mx-auto mb-1">
-                    <span className="text-xs font-bold text-yellow-900">G</span>
-                  </div>
-                  <p className="text-xs">Watergate</p>
-                </div>
-                <div className="bg-purple-50 p-2 rounded border text-center">
-                  <div className="w-6 h-6 bg-purple-500 border border-purple-700 rounded flex items-center justify-center mx-auto mb-1">
-                    <span className="text-xs font-bold text-purple-100">B</span>
-                  </div>
-                  <p className="text-xs">Flood Barrier</p>
-                </div>
+                {[201,202,203,204].map((t) => {
+                  const Icon = buildingIcons[t];
+                  const iconColor = buildingIconColors[t];
+                  const bg = t === 201 ? "bg-green-50" : t === 202 ? "bg-orange-50" : t === 203 ? "bg-yellow-50" : "bg-purple-50";
+                  return (
+                    <div key={t} className={`${bg} p-2 rounded border text-center`}>
+                      <div className="w-8 h-8 rounded flex items-center justify-center mx-auto mb-1">
+                        <Icon size={20} color={iconColor} />
+                      </div>
+                      <p className="text-xs">{buildingNames[t]}</p>
+                    </div>
+                  );
+                })}
               </div>
             </div>
 
