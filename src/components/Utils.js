@@ -215,7 +215,10 @@ export const parseObservationForBoard = (observation) => {
         if (v === -1) return -1; // no building
         // Backend indices: 0=House,1=Shop,2=GreenPark,3=CommunityHub,4=SolarGrid,5=FloodBarrier
         const mapping = { 0: 100, 1: 101, 2: 201, 3: 202, 4: 203, 5: 204 };
-        return mapping.hasOwnProperty(v) ? mapping[v] : v;
+        if (mapping.hasOwnProperty(v)) return mapping[v];
+        // Legacy/infra markers occasionally appear in building_types; treat as empty
+        if (v >= 6 && v <= 14) return -1;
+        return v;
       };
       const buildingTypesFlatRaw = observation.slice(buildingTypesStart, buildingTypesEnd);
       const buildingTypesFlat = buildingTypesFlatRaw.map(mapBackendTypeToFrontend);
@@ -236,8 +239,10 @@ export const parseObservationForBoard = (observation) => {
         if (typeof v !== 'number') return v;
         if (v === -1 || v === 0) return v;
         if (isKnownId(v)) return v;
+        // Legacy range (6..14) can appear; normalize to empty without warning
+        if (v >= 6 && v <= 14) return -1;
         // Unknowns: treat as empty
-        console.warn(`Unknown project id ${v} -> treating as empty (-1)`);
+        // console.warn(`Unknown project id ${v} -> treating as empty (-1)`);
         return -1;
       };
 
