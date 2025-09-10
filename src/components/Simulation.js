@@ -38,6 +38,9 @@ const Simulation = () => {
   const [showBuilders, setShowBuilders] = useState(true);
   const [useTextIcons, setUseTextIcons] = useState(false);
 
+  // Parameter overlay display state
+  const [parameterOverlayMode, setParameterOverlayMode] = useState(null); // null, 'G', 'V', 'D', 'A', 'S', 'F'
+
   // Simulation episode state variables
   const [simulationEpisode, setSimulationEpisode] = useState(null);
   const [currentTurnIndex, setCurrentTurnIndex] = useState(0);
@@ -47,6 +50,34 @@ const Simulation = () => {
 
   // Debug info visibility state
   const [debugInfoExpanded, setDebugInfoExpanded] = useState(true);
+
+  // Extract parameter values for each grid cell from observation
+  const extractParameterGrid = (observation) => {
+    if (!Array.isArray(observation) || observation.length < 864) {
+      return null;
+    }
+    
+    const gridData = observation.slice(0, 864);
+    const parameterGrid = {};
+    const paramNames = ['G', 'V', 'D', 'A', 'S', 'F'];
+    
+    // Initialize grid for each parameter
+    paramNames.forEach(param => {
+      parameterGrid[param] = Array(12).fill().map(() => Array(12).fill(0));
+    });
+    
+    // Fill grid with parameter values
+    for (let i = 0; i < 12; i++) {
+      for (let j = 0; j < 12; j++) {
+        for (let param = 0; param < 6; param++) {
+          const index = (i * 12 + j) * 6 + param;
+          parameterGrid[paramNames[param]][i][j] = gridData[index];
+        }
+      }
+    }
+    
+    return parameterGrid;
+  };
 
   // Synchronize currentPlayer with currentMovementIndex (4 players: P1, P2, P3, P4)
   useEffect(() => {
@@ -165,8 +196,23 @@ const Simulation = () => {
     );
   };
 
+  // Get current parameter grid for overlay
+  const getCurrentParameterGrid = () => {
+    if (!simulationEpisode || !simulationEpisode[currentTurnIndex]) {
+      return null;
+    }
+    
+    const turnData = simulationEpisode[currentTurnIndex];
+    if (turnData.observation && turnData.observation[0] && turnData.observation[0][0]) {
+      const agentObservation = turnData.observation[0][0][0];
+      return extractParameterGrid(agentObservation);
+    }
+    return null;
+  };
+
   // Render the board based on boardState
   const renderBoard = () => {
+    const parameterGrid = getCurrentParameterGrid();
     return (
       <div className="flex justify-center my-4">
         <table className="table-auto border-collapse border border-gray-400">
@@ -200,7 +246,28 @@ const Simulation = () => {
                   };
                   
                   const iconColor = buildingIconColors[cell.type] || buildingIconColors[-1];
-                  const bgClass = buildingColorMap[cell.type] || "bg-gray-100";
+                  const bgClass = parameterOverlayMode ? "bg-white" : (buildingColorMap[cell.type] || "bg-gray-100");
+                  
+                  // Parameter overlay logic
+                  const getParameterOverlay = () => {
+                    if (!parameterOverlayMode || !parameterGrid) return '';
+                    
+                    const paramValue = parameterGrid[parameterOverlayMode][rowIndex][cellIndex];
+                    const normalizedValue = Math.max(0, Math.min(1, (paramValue + 50) / 300)); // Normalize to 0-1 range
+                    
+                    const parameterColors = {
+                      G: `rgba(34, 197, 94, ${normalizedValue * 0.7})`, // green
+                      V: `rgba(59, 130, 246, ${normalizedValue * 0.7})`, // blue
+                      D: `rgba(147, 51, 234, ${normalizedValue * 0.7})`, // purple
+                      A: `rgba(249, 115, 22, ${normalizedValue * 0.7})`, // orange
+                      S: `rgba(20, 184, 166, ${normalizedValue * 0.7})`, // teal
+                      F: `rgba(99, 102, 241, ${normalizedValue * 0.7})` // indigo
+                    };
+                    
+                    return parameterColors[parameterOverlayMode];
+                  };
+                  
+                  const overlayColor = getParameterOverlay();
                   
                   return (
                     <td
@@ -208,13 +275,24 @@ const Simulation = () => {
                       className={`w-16 h-16 border border-gray-300 text-center ${cell.type === -1 ? 'bg-gray-200' : bgClass} cursor-pointer hover:bg-opacity-80 relative`}
                       onClick={() => console.log(`Cell clicked at [${rowIndex},${cellIndex}]`)}
                     >
+                      {/* Parameter overlay */}
+                      {overlayColor && (
+                        <div 
+                          className="absolute inset-0 pointer-events-none"
+                          style={{ backgroundColor: overlayColor }}
+                        />
+                      )}
+                      
                       <div className="flex flex-col items-center justify-center h-full relative">
-                        {/* Display flat icon */}
-                        <div className="mb-1 flex items-center justify-center">
-                          {getFlatIcon(cell.type)}
-                        </div>
+                        {/* Display flat icon - hide when overlay is active */}
+                        {!parameterOverlayMode && (
+                          <div className="mb-1 flex items-center justify-center">
+                            {getFlatIcon(cell.type)}
+                          </div>
+                        )}
                         
-                        {cell.owner && cell.type !== 0 && cell.type !== -1 && cell.owner !== "TERRAIN" && cell.owner !== "INFRA" && (
+                        {/* Hide owner labels when overlay is active */}
+                        {!parameterOverlayMode && cell.owner && cell.type !== 0 && cell.type !== -1 && cell.owner !== "TERRAIN" && cell.owner !== "INFRA" && (
                           <span className="text-xs text-gray-700 font-bold absolute bottom-0 bg-white bg-opacity-75 px-1 rounded">
                             {cell.owner}
                           </span>
@@ -260,12 +338,62 @@ const Simulation = () => {
           <h2 className="text-2xl font-semibold mb-4 text-center">Game Board</h2>
           {renderBoard()}
           
-          <button
-            onClick={() => setShowBuilders(!showBuilders)}
-            className="px-4 py-2 text-white bg-blue-500 rounded-md hover:bg-blue-600 mt-4"
-          >
-            {showBuilders ? "Hide Builders" : "Show Builders"}
-          </button>
+          <div className="mt-4 space-y-2">
+            <button
+              onClick={() => setShowBuilders(!showBuilders)}
+              className="px-4 py-2 text-white bg-blue-500 rounded-md hover:bg-blue-600"
+            >
+              {showBuilders ? "Hide Builders" : "Show Builders"}
+            </button>
+            
+            {/* Parameter Overlay Controls */}
+            <div className="bg-gray-50 p-3 rounded-md border">
+              <h4 className="text-sm font-semibold mb-2">Parameter Overlay</h4>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  onClick={() => setParameterOverlayMode(parameterOverlayMode === null ? 'G' : null)}
+                  className={`px-3 py-2 text-xs rounded ${parameterOverlayMode === 'G' ? 'bg-green-500 text-white' : 'bg-white border hover:bg-green-50'}`}
+                >
+                  Greenery
+                </button>
+                <button
+                  onClick={() => setParameterOverlayMode(parameterOverlayMode === 'V' ? null : 'V')}
+                  className={`px-3 py-2 text-xs rounded ${parameterOverlayMode === 'V' ? 'bg-blue-500 text-white' : 'bg-white border hover:bg-blue-50'}`}
+                >
+                  Vitality
+                </button>
+                <button
+                  onClick={() => setParameterOverlayMode(parameterOverlayMode === 'D' ? null : 'D')}
+                  className={`px-3 py-2 text-xs rounded ${parameterOverlayMode === 'D' ? 'bg-purple-500 text-white' : 'bg-white border hover:bg-purple-50'}`}
+                >
+                  Density
+                </button>
+                <button
+                  onClick={() => setParameterOverlayMode(parameterOverlayMode === 'A' ? null : 'A')}
+                  className={`px-3 py-2 text-xs rounded ${parameterOverlayMode === 'A' ? 'bg-orange-500 text-white' : 'bg-white border hover:bg-orange-50'}`}
+                >
+                  Adaptability
+                </button>
+                <button
+                  onClick={() => setParameterOverlayMode(parameterOverlayMode === 'S' ? null : 'S')}
+                  className={`px-3 py-2 text-xs rounded ${parameterOverlayMode === 'S' ? 'bg-teal-500 text-white' : 'bg-white border hover:bg-teal-50'}`}
+                >
+                  Sustainability
+                </button>
+                <button
+                  onClick={() => setParameterOverlayMode(parameterOverlayMode === 'F' ? null : 'F')}
+                  className={`px-3 py-2 text-xs rounded ${parameterOverlayMode === 'F' ? 'bg-indigo-500 text-white' : 'bg-white border hover:bg-indigo-50'}`}
+                >
+                  Flood Resistance
+                </button>
+              </div>
+              {parameterOverlayMode && (
+                <p className="text-xs text-gray-600 mt-2">
+                  Showing {parameterOverlayMode} parameter overlay - darker colors indicate higher values
+                </p>
+              )}
+            </div>
+          </div>
         </div>
 
         {/* RIGHT SIDE: Controls & Information */}
