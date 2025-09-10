@@ -19,6 +19,8 @@ import {
   testIconStyles as iconStyles
 } from "../components/TestUtils";
 
+import ParameterTrendChart from "../components/ParameterTrendChart";
+
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL ||
   (process.env.NODE_ENV === "development"
@@ -325,6 +327,12 @@ const Simulation = () => {
             }
             return null;
           })()}
+
+          {/* Parameter Trend Chart */}
+          <ParameterTrendChart 
+            simulationEpisode={simulationEpisode} 
+            currentTurnIndex={currentTurnIndex}
+          />
 
           {/* Simulation Controls */}
           <div className="bg-white shadow-md rounded-md p-4">
